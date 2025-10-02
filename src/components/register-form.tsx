@@ -13,14 +13,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useState } from "react"
 import { Eye, EyeOff, CheckCircle2, XCircle,Loader2 } from "lucide-react"
+import { toast } from "sonner"
 
 interface RegisterFormProps extends React.ComponentProps<"div"> {
-    onSwitchToLogin?: () => void
 }
 
 export function RegisterForm({
     className,
-    onSwitchToLogin,
     ...props
 }: RegisterFormProps) {
     const [showPassword, setShowPassword] = useState(false)
@@ -39,14 +38,43 @@ export function RegisterForm({
     }
 
     const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-        setIsLoading(true)
-        
-        await new Promise(resolve => setTimeout(resolve, 1500))
-        
-        console.log("Registration data:", formData)
-        setIsLoading(false)
+    e.preventDefault();
+    setIsLoading(true);
+
+    if (!isPasswordStrong || !passwordsMatch) {
+        toast.error("Password does not meet requirements or passwords do not match.");
+        setIsLoading(false);
+        return;
     }
+
+    try {
+        const response = await fetch("/api/users/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                name: formData.name,
+                email: formData.email,
+                password: formData.password
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            toast.error(data.error || "Registration failed");
+        } else {
+            localStorage.setItem("token", data.token);
+            toast.success("Registration successful! You can now log in.");
+            setFormData({ name: "", email: "", password: "", confirmPassword: "" });
+        }
+    } catch (error: any) {
+        console.error("Registration error:", error);
+        toast.error("Unexpected error occurred");
+    } finally {
+        setIsLoading(false);
+    }
+};
+
     const hasMinLength = formData.password.length >= 8
     const hasUpperCase = /[A-Z]/.test(formData.password)
     const hasLowerCase = /[a-z]/.test(formData.password)
@@ -212,13 +240,9 @@ export function RegisterForm({
 
                         <div className="text-center text-sm">
                             Already have an account?{" "}
-                            <button
-                                type="button"
-                                onClick={onSwitchToLogin}
-                                className="text-primary underline-offset-4 hover:underline font-medium"
-                            >
+                            <a href="/login" className="underline underline-offset-4">
                                 Sign in
-                            </button>
+                            </a>
                         </div>
                     </form>
                 </CardContent>

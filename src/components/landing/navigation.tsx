@@ -12,9 +12,9 @@ export function Navigation() {
     <nav className="fixed top-0 w-full bg-background/80 backdrop-blur-md border-b border-border z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 hover:cursor-pointer" onClick={() => window.location.href = "/"}>
             <GraduationCap className="h-8 w-8 text-primary" />
-            <span className="font-bold text-xl">CredentialHub</span>
+            <span className="font-bold text-xl">Certi-fi</span>
           </div>
 
           <div className="hidden md:flex items-center space-x-8">
