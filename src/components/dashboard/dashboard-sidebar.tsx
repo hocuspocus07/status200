@@ -1,6 +1,8 @@
 "use client"
 
-import { useState,useEffect} from "react"
+import { useState } from "react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
@@ -19,7 +21,7 @@ import {
 import { DashboardProfile } from "@/components/dashboard/dashboard-profile"
 
 const navigation = [
-  { name: "Dashboard", href: "/dashboard", icon: Home, current: true },
+  { name: "Dashboard", href: "/dashboard", icon: Home },
   { name: "My Credentials", href: "/dashboard/my-credentials", icon: Award, count: 12 },
   { name: "Verification", href: "/dashboard/verification", icon: FileText },
   { name: "Network", href: "/dashboard/network", icon: Users },
@@ -28,51 +30,19 @@ const navigation = [
 export function DashboardSidebar() {
   const [collapsed, setCollapsed] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
-  const [user, setUser] = useState<{ name: string; email: string } | null>(null)
+  const pathname = usePathname()
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      const token = localStorage.getItem("token")
-      if (!token) {
-        window.location.href = "/login"
-        return
-      }
-
-      try {
-        const response = await fetch("/api/users/me", {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        })
-
-        if (response.ok) {
-          const data = await response.json()
-          setUser(data.user)
-        } else {
-          // Token is invalid, redirect to login
-          localStorage.removeItem("token")
-          window.location.href = "/login"
-        }
-      } catch (error) {
-        console.error('Failed to fetch user:', error)
-        localStorage.removeItem("token")
-        window.location.href = "/login"
-      }
-    }
-
-    fetchUser()
-  }, [])
   const SidebarContent = () => (
     <div className="flex h-full flex-col">
       {/* Header */}
       <div className="flex h-16 items-center justify-between px-4 border-b border-sidebar-border">
         {!collapsed && (
-          <div className="flex items-center space-x-2 hover:cursor-pointer" onClick={() => window.location.href = "/"}>
+          <Link href={"/"} className="flex items-center space-x-2">
             <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
               <Award className="h-5 w-5 text-primary-foreground" />
             </div>
             <span className="font-semibold text-sidebar-foreground">Certi-fi</span>
-          </div>
+          </Link>
         )}
         <Button
           variant="ghost"
@@ -86,30 +56,33 @@ export function DashboardSidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 space-y-1 p-4">
-        {navigation.map((item) => (
-          <a
-            key={item.name}
-            href={item.href}
-            className={cn(
-              "group flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-              item.current
-                ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-            )}
-          >
-            <item.icon className="h-5 w-5 flex-shrink-0" />
-            {!collapsed && (
-              <>
-                <span className="ml-3 flex-1">{item.name}</span>
-                {item.count && (
-                  <Badge variant="secondary" className="ml-auto">
-                    {item.count}
-                  </Badge>
-                )}
-              </>
-            )}
-          </a>
-        ))}
+        {navigation.map((item) => {
+          const active = pathname === item.href
+          return (
+            <Link
+              key={item.name}
+              href={item.href}
+              className={cn(
+                "group flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                active
+                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+              )}
+            >
+              <item.icon className="h-5 w-5 flex-shrink-0" />
+              {!collapsed && (
+                <>
+                  <span className="ml-3 flex-1">{item.name}</span>
+                  {item.count && (
+                    <Badge variant="secondary" className="ml-auto">
+                      {item.count}
+                    </Badge>
+                  )}
+                </>
+              )}
+            </Link>
+          )
+        })}
       </nav>
 
       {/* User Profile */}
@@ -119,11 +92,11 @@ export function DashboardSidebar() {
             <DialogTrigger asChild>
               <button className="flex items-center space-x-3 w-full rounded-lg p-2 hover:bg-sidebar-accent transition-colors">
                 <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <span className="text-sm font-medium text-primary">{user?.name[0]}</span>
+                  <span className="text-sm font-medium text-primary">JD</span>
                 </div>
                 <div className="flex-1 min-w-0 text-left">
-                  <p className="text-sm font-medium text-sidebar-foreground truncate">{user?.name}</p>
-                  <p className="text-xs text-sidebar-foreground/60 truncate">{user?.email}</p>
+                  <p className="text-sm font-medium text-sidebar-foreground truncate">John Doe</p>
+                  <p className="text-xs text-sidebar-foreground/60 truncate">john@example.com</p>
                 </div>
                 <User className="h-4 w-4 text-sidebar-foreground/60" />
               </button>
