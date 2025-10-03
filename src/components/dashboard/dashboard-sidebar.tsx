@@ -23,7 +23,7 @@ import { DashboardProfile } from "@/components/dashboard/dashboard-profile"
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: Home, current: true },
-  { name: "My Credentials", href: "/dashboard/credentials", icon: Award, count: 12 },
+  { name: "My Credentials", href: "/dashboard/my-credentials", icon: Award, count: 12 },
   { name: "Verification", href: "/dashboard/verification", icon: FileText },
   { name: "Network", href: "/dashboard/network", icon: Users },
 ]
@@ -31,7 +31,6 @@ const navigation = [
 export function DashboardSidebar() {
   const [collapsed, setCollapsed] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
-  const profileRef = useRef<HTMLDivElement>(null)
   const [user, setUser] = useState<{ name: string; email: string } | null>(null)
 
   useEffect(() => {
