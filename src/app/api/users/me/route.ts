@@ -32,8 +32,10 @@ export async function GET(req: NextRequest) {
       }
     });
 
-  } catch (error: any) {
-    console.error("Get user error:", error);
-    return NextResponse.json({ error: "Invalid token or user not found" }, { status: 401 });
+  } catch (error: unknown) {
+    if(error instanceof Error){
+      console.error("Get user error:", error);
+      return NextResponse.json({ error: "Invalid token or user not found" }, { status: 401 });
+    }
   }
 }

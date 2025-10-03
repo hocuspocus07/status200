@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState,useEffect,useRef } from "react"
+import { useMemo, useState,useEffect} from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -40,7 +40,7 @@ export function DashboardProfile() {
   const initials = useMemo(() => (email ? email[0].toUpperCase() : "U"), [email])
 
   const [education, setEducation] = useState<Education[]>([])
-  const [certificates, setCertificates] = useState<Certificate[]>([])
+  const [certificates] = useState<Certificate[]>([])
   const [addOpen, setAddOpen] = useState(false)
   const [form, setForm] = useState<Omit<Education, "id">>({
     institution: "",

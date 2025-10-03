@@ -111,7 +111,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
             </Button>
 
             <div className="text-center text-sm mt-2">
-              Don't have an account?{" "}
+              Don&apos;t have an account?{" "}
               <a href="/register" className="underline underline-offset-4">
                 Sign up
               </a>

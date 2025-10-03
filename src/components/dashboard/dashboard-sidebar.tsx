@@ -1,6 +1,6 @@
 "use client"
 
-import { useState,useEffect,useRef } from "react"
+import { useState,useEffect} from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
@@ -9,10 +9,7 @@ import { cn } from "@/lib/utils"
 import {
   Home,
   Award,
-  BookOpen,
   Users,
-  Settings,
-  BarChart3,
   FileText,
   ChevronLeft,
   ChevronRight,

@@ -1,10 +1,10 @@
 "use client"
-import { useEffect,useRef,useState } from "react"
+import { useEffect,useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
-import { Award, TrendingUp, Users, BookOpen, Calendar, ExternalLink, Star, Clock } from "lucide-react"
+import { Award, TrendingUp, Users, BookOpen, ExternalLink, Star, Clock } from "lucide-react"
 
 const stats = [
   {
@@ -119,7 +119,7 @@ export function DashboardMain() {
       <div className="space-y-2">
         <h2 className="text-xl md:text-2xl font-bold text-foreground">Welcome back, {user?.name}</h2>
         <p className="text-sm md:text-base text-muted-foreground">
-          Here's what's happening with your credentials and learning journey.
+          Here&apos;s what&apos;s happening with your credentials and learning journey.
         </p>
       </div>
 

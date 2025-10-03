@@ -15,13 +15,10 @@ import { useState } from "react"
 import { Eye, EyeOff, CheckCircle2, XCircle,Loader2 } from "lucide-react"
 import { toast } from "sonner"
 
-interface RegisterFormProps extends React.ComponentProps<"div"> {
-}
-
 export function RegisterForm({
     className,
     ...props
-}: RegisterFormProps) {
+}:React.ComponentProps<"div">) {
     const [showPassword, setShowPassword] = useState(false)
     const [showConfirmPassword, setShowConfirmPassword] = useState(false)
     const [formData, setFormData] = useState({
@@ -67,9 +64,10 @@ export function RegisterForm({
             toast.success("Registration successful! You can now log in.");
             setFormData({ name: "", email: "", password: "", confirmPassword: "" });
         }
-    } catch (error: any) {
-        console.error("Registration error:", error);
-        toast.error("Unexpected error occurred");
+    } catch (error: unknown) {
+        if(error instanceof Error) {
+            toast.error("Unexpected error occurred");
+        }
     } finally {
         setIsLoading(false);
     }

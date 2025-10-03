@@ -8,7 +8,20 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Award, Search, Filter, ExternalLink, Calendar, Building } from "lucide-react"
 
-const credentials = [
+interface Credential {
+  id: number;
+  title: string;
+  provider: string;
+  issueDate: string;    // ISO date string
+  expiryDate: string;   // ISO date string
+  status: "verified" | "pending";
+  category: string;
+  level: string;
+  credentialId: string;
+  skills: string[];
+}
+
+const credentials: Credential[] = [
   {
     id: 1,
     title: "AWS Certified Cloud Practitioner",
@@ -146,7 +159,7 @@ export function CredentialsPanel() {
   )
 }
 
-function CredentialCard({ credential }: { credential: any }) {
+function CredentialCard({ credential }: { credential: Credential }) {
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">

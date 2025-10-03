@@ -70,7 +70,7 @@ export default function VerifyPage() {
       toast("Your certificate has been submitted for verification.")
       form.reset()
       setFile(null)
-    } catch (e) {
+    } catch {
       toast("Please try again later.")
     } finally {
       setSubmitting(false)
