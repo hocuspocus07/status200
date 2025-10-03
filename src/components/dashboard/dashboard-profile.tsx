@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState,useEffect} from "react"
+import { useMemo, useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Calendar, GraduationCap, MapPin, AtSign, LinkIcon, Award, Plus, Pencil, Briefcase, Mail } from "lucide-react"
+import { Calendar, GraduationCap, MapPin, AtSign, LinkIcon, Award, Plus, Pencil, Briefcase, Mail, LogOut } from "lucide-react"
+import { toast } from "sonner"
 
 type Education = {
   id: string
@@ -52,14 +53,6 @@ export function DashboardProfile() {
     description: "",
   })
 
-  const handleAddEducation = () => {
-    if (!form.institution || !form.degree || !form.field || !form.start) return
-    const newEntry: Education = { id: crypto.randomUUID(), ...form, end: form.current ? undefined : form.end }
-    setEducation((prev) => [newEntry, ...prev])
-    setForm({ institution: "", degree: "", field: "", start: "", end: "", current: false, description: "" })
-    setAddOpen(false)
-  }
-
   const [user, setUser] = useState<{ name: string; email: string } | null>(null)
 
   useEffect(() => {
@@ -72,28 +65,37 @@ export function DashboardProfile() {
 
       try {
         const response = await fetch("/api/users/me", {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+          headers: { Authorization: `Bearer ${token}` },
         })
-
         if (response.ok) {
           const data = await response.json()
           setUser(data.user)
         } else {
-          // Token is invalid, redirect to login
           localStorage.removeItem("token")
           window.location.href = "/login"
         }
       } catch (error) {
-        console.error('Failed to fetch user:', error)
+        console.error("Failed to fetch user:", error)
         localStorage.removeItem("token")
         window.location.href = "/login"
       }
     }
-
     fetchUser()
   }, [])
+
+  const handleSignOut = () => {
+    localStorage.removeItem("token")
+    window.location.href = "/login"
+    toast.success("Signed out successfully");
+  }
+
+  const handleAddEducation = () => {
+    if (!form.institution || !form.degree || !form.field || !form.start) return
+    const newEntry: Education = { id: crypto.randomUUID(), ...form, end: form.current ? undefined : form.end }
+    setEducation((prev) => [newEntry, ...prev])
+    setForm({ institution: "", degree: "", field: "", start: "", end: "", current: false, description: "" })
+    setAddOpen(false)
+  }
 
   return (
     <div className="space-y-4 md:space-y-6 animate-fade-in-up">
@@ -101,31 +103,43 @@ export function DashboardProfile() {
       <Card className="animate-slide-in-left" style={{ animationDelay: "80ms" }}>
         <CardContent className="p-4 md:p-6">
           <div className="flex flex-col gap-4 md:gap-6">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-              <Avatar className="h-16 w-16 md:h-20 md:w-20">
-                <AvatarImage src="/placeholder-user.jpg" alt="User avatar" />
-                <AvatarFallback>{initials}</AvatarFallback>
-              </Avatar>
-              <div className="space-y-1 flex-1 min-w-0">
-                <h2 className="text-lg md:text-xl font-bold text-foreground">{user?.name}</h2>
-                <p className="text-sm text-muted-foreground line-clamp-1">{headline}</p>
-                <div className="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center gap-2 sm:gap-3 text-xs md:text-sm text-muted-foreground">
-                  <span className="inline-flex items-center gap-1">
-                    <MapPin className="h-3 w-3 md:h-4 md:w-4" /> {location}
-                  </span>
-                  <span className="inline-flex items-center gap-1 truncate">
-                    <Mail className="h-3 w-3 md:h-4 md:w-4" /> {user?.email}
-                  </span>
-                  <a
-                    className="inline-flex items-center gap-1 hover:underline truncate"
-                    href={website}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    <LinkIcon className="h-3 w-3 md:h-4 md:w-4" /> Website
-                  </a>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 justify-between">
+              <div className="flex items-start sm:items-center gap-4">
+                <Avatar className="h-16 w-16 md:h-20 md:w-20">
+                  <AvatarImage src="/placeholder-user.jpg" alt="User avatar" />
+                  <AvatarFallback>{initials}</AvatarFallback>
+                </Avatar>
+                <div className="space-y-1 flex-1 min-w-0">
+                  <h2 className="text-lg md:text-xl font-bold text-foreground">{user?.name}</h2>
+                  <p className="text-sm text-muted-foreground line-clamp-1">{headline}</p>
+                  <div className="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center gap-2 sm:gap-3 text-xs md:text-sm text-muted-foreground">
+                    <span className="inline-flex items-center gap-1">
+                      <MapPin className="h-3 w-3 md:h-4 md:w-4" /> {location}
+                    </span>
+                    <span className="inline-flex items-center gap-1 truncate">
+                      <Mail className="h-3 w-3 md:h-4 md:w-4" /> {user?.email}
+                    </span>
+                    <a
+                      className="inline-flex items-center gap-1 hover:underline truncate"
+                      href={website}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <LinkIcon className="h-3 w-3 md:h-4 md:w-4" /> Website
+                    </a>
+                  </div>
                 </div>
               </div>
+
+              {/* Sign Out Button */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSignOut}
+                className="ml-auto flex items-center gap-2 text-xs md:text-sm"
+              >
+                <LogOut className="h-4 w-4" /> Sign Out
+              </Button>
             </div>
 
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">

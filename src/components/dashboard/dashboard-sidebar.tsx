@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState,useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -31,7 +31,40 @@ export function DashboardSidebar() {
   const [collapsed, setCollapsed] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const pathname = usePathname()
+const [user, setUser] = useState<{ name: string; email: string } | null>(null)
 
+  useEffect(() => {
+    const fetchUser = async () => {
+      const token = localStorage.getItem("token")
+      if (!token) {
+        window.location.href = "/login"
+        return
+      }
+
+      try {
+        const response = await fetch("/api/users/me", {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          setUser(data.user)
+        } else {
+          // Token is invalid, redirect to login
+          localStorage.removeItem("token")
+          window.location.href = "/login"
+        }
+      } catch (error) {
+        console.error('Failed to fetch user:', error)
+        localStorage.removeItem("token")
+        window.location.href = "/login"
+      }
+    }
+
+    fetchUser()
+  }, [])
   const SidebarContent = () => (
     <div className="flex h-full flex-col">
       {/* Header */}
@@ -92,11 +125,11 @@ export function DashboardSidebar() {
             <DialogTrigger asChild>
               <button className="flex items-center space-x-3 w-full rounded-lg p-2 hover:bg-sidebar-accent transition-colors">
                 <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <span className="text-sm font-medium text-primary">JD</span>
+                  <span className="text-sm font-medium text-primary">{user?.name[0]}</span>
                 </div>
                 <div className="flex-1 min-w-0 text-left">
-                  <p className="text-sm font-medium text-sidebar-foreground truncate">John Doe</p>
-                  <p className="text-xs text-sidebar-foreground/60 truncate">john@example.com</p>
+                  <p className="text-sm font-medium text-sidebar-foreground truncate">{user?.name}</p>
+                  <p className="text-xs text-sidebar-foreground/60 truncate">{user?.email}</p>
                 </div>
                 <User className="h-4 w-4 text-sidebar-foreground/60" />
               </button>
