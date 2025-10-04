@@ -1,6 +1,8 @@
 "use client"
 
-import { useState,useEffect,useRef } from "react"
+import { useState,useEffect } from "react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
@@ -9,10 +11,7 @@ import { cn } from "@/lib/utils"
 import {
   Home,
   Award,
-  BookOpen,
   Users,
-  Settings,
-  BarChart3,
   FileText,
   ChevronLeft,
   ChevronRight,
@@ -22,8 +21,8 @@ import {
 import { DashboardProfile } from "@/components/dashboard/dashboard-profile"
 
 const navigation = [
-  { name: "Dashboard", href: "/dashboard", icon: Home, current: true },
-  { name: "My Credentials", href: "/dashboard/credentials", icon: Award, count: 12 },
+  { name: "Dashboard", href: "/dashboard", icon: Home },
+  { name: "My Credentials", href: "/dashboard/my-credentials", icon: Award, count: 12 },
   { name: "Verification", href: "/dashboard/verification", icon: FileText },
   { name: "Network", href: "/dashboard/network", icon: Users },
 ]
@@ -31,8 +30,8 @@ const navigation = [
 export function DashboardSidebar() {
   const [collapsed, setCollapsed] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
-  const profileRef = useRef<HTMLDivElement>(null)
-  const [user, setUser] = useState<{ name: string; email: string } | null>(null)
+  const pathname = usePathname()
+const [user, setUser] = useState<{ name: string; email: string } | null>(null)
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -71,12 +70,12 @@ export function DashboardSidebar() {
       {/* Header */}
       <div className="flex h-16 items-center justify-between px-4 border-b border-sidebar-border">
         {!collapsed && (
-          <div className="flex items-center space-x-2 hover:cursor-pointer" onClick={() => window.location.href = "/"}>
+          <Link href={"/"} className="flex items-center space-x-2">
             <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
               <Award className="h-5 w-5 text-primary-foreground" />
             </div>
             <span className="font-semibold text-sidebar-foreground">Certi-fi</span>
-          </div>
+          </Link>
         )}
         <Button
           variant="ghost"
@@ -90,30 +89,33 @@ export function DashboardSidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 space-y-1 p-4">
-        {navigation.map((item) => (
-          <a
-            key={item.name}
-            href={item.href}
-            className={cn(
-              "group flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-              item.current
-                ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-            )}
-          >
-            <item.icon className="h-5 w-5 flex-shrink-0" />
-            {!collapsed && (
-              <>
-                <span className="ml-3 flex-1">{item.name}</span>
-                {item.count && (
-                  <Badge variant="secondary" className="ml-auto">
-                    {item.count}
-                  </Badge>
-                )}
-              </>
-            )}
-          </a>
-        ))}
+        {navigation.map((item) => {
+          const active = pathname === item.href
+          return (
+            <Link
+              key={item.name}
+              href={item.href}
+              className={cn(
+                "group flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                active
+                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+              )}
+            >
+              <item.icon className="h-5 w-5 flex-shrink-0" />
+              {!collapsed && (
+                <>
+                  <span className="ml-3 flex-1">{item.name}</span>
+                  {item.count && (
+                    <Badge variant="secondary" className="ml-auto">
+                      {item.count}
+                    </Badge>
+                  )}
+                </>
+              )}
+            </Link>
+          )
+        })}
       </nav>
 
       {/* User Profile */}

@@ -3,10 +3,8 @@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ThemeToggle } from "@/components/theme-toggle"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { Bell, Search, Plus, Award } from "lucide-react"
+import { Bell, Search, Plus } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import { CredentialsPanel } from "@/components/dashboard/credentials-panel"
 
 export function DashboardHeader() {
   return (
@@ -29,18 +27,6 @@ export function DashboardHeader() {
             <Plus className="h-4 w-4 md:mr-2" />
             <span className="hidden md:inline">Add Credential</span>
           </Button>
-
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="sm" className="xl:hidden relative">
-                <Award className="h-5 w-5" />
-                <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 text-xs">12</Badge>
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-full sm:w-96 p-0">
-              <CredentialsPanel />
-            </SheetContent>
-          </Sheet>
 
           {/* Notifications */}
           <Button variant="ghost" size="sm" className="relative">

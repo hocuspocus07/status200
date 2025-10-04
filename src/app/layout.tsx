@@ -6,6 +6,7 @@ import { Analytics } from "@vercel/analytics/next"
 import { ThemeProvider } from "@/components/landing/theme-provider"
 import { Suspense } from "react"
 import "./globals.css"
+import { Toaster } from "sonner"
 
 export const metadata: Metadata = {
   title: "CredentialHub - Your Complete Micro-Credential Portfolio",
@@ -25,6 +26,7 @@ export default function RootLayout({
         <Suspense fallback={null}>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
             {children}
+            <Toaster/>
           </ThemeProvider>
         </Suspense>
         <Analytics />
