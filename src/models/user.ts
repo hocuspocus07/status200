@@ -6,6 +6,8 @@ export interface IUser extends Document {
   name: string;
   email: string;
   password_hash: string;
+  uuid: string;           // New field
+  learnerIdHash: string;  // New field
   profile?: {
     avatar?: string;
     username?: string;
@@ -26,6 +28,8 @@ const UserSchema = new Schema<IUser>(
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true, lowercase: true },
     password_hash: { type: String, required: true },
+    uuid: { type: String, required: true, unique: true },          // New
+    learnerIdHash: { type: String, required: true, unique: true }, // New
     profile: {
       avatar: String,
       username: String,
