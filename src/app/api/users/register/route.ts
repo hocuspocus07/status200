@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
     await dbConnect();
 
     const body = await req.json();
-    const { name, email, password} = body;
+    const { name, email, password } = body;
 
     if (!name || !email || !password) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -40,10 +40,10 @@ export async function POST(req: NextRequest) {
       name,
       email,
       password_hash,
-      learnerId: uuid,
-      blockchainId: learnerIdHash
+      uuid: uuid,
+      learnerIdHash: learnerIdHash
     });
-  const token = jwt.sign({ id: user._id, email: user.emaillearnerIdHash, learnerIdHash: user.learnerIdHash}, JWT_SECRET, { expiresIn: "7d" });
+    const token = jwt.sign({ id: user._id, email: user.email, learnerIdHash: user.learnerIdHash }, JWT_SECRET, { expiresIn: "7d" });
 
     return NextResponse.json({
       message: "User registered successfully",
@@ -52,11 +52,14 @@ export async function POST(req: NextRequest) {
         id: user._id,
         name: user.name,
         email: user.email,
+        uuid: user.uuid,
+        learnerIdHash: user.learnerIdHash,
+
       }
     }, { status: 201 });
 
   } catch (error: unknown) {
-    if(error instanceof Error){
+    if (error instanceof Error) {
       console.error("Register error:", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }

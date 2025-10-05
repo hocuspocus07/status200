@@ -1,53 +1,89 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { type Credential, CredentialCard } from "@/components/credentials/credential-card"
+import React, { useEffect, useState } from "react";
 
-export default function CredentialsPage() {
-  // Example data. Replace with data from your API/database.
-  const [credentials] = React.useState<Credential[]>([
-    {
-      id: "1",
-      name: "example1",
-      issuer: "example2e",
-      issuedAt: "Aug 2025",
-      verificationUrl: "https://example.com/verify/1",
-      verified: true,
-    },
-    {
-      id: "2",
-      name: "example1",
-      issuer: "example2e",
-      issuedAt: "May 2025",
-      verificationUrl: "https://example.com/verify/2",
-      verified: true,
-    },
-    {
-      id: "3",
-      name: "example1",
-      issuer: "example2e",
-      issuedAt: "Jan 2025",
-      verificationUrl: "https://example.com/verify/3",
-      verified: true,
-    },
-  ])
+interface Certificate {
+  _id: string;
+  course: string;
+  issuer: string;
+  certHash: string;
+}
+
+interface BlockchainData {
+  certHash: string;
+  courseHash: string;
+  issuerHash: string;
+  issuedOn: number;
+}
+
+export default function MyCertificatesPage() {
+  const [certificates, setCertificates] = useState<Certificate[]>([]);
+  const [blockchainData, setBlockchainData] = useState<Record<string, BlockchainData | null>>({});
+  const [loadingChain, setLoadingChain] = useState<Record<string, boolean>>({});
+  const [user, setUser] = useState<{ learnerIdHash: string } | null>(null);
+
+  useEffect(() => {
+    setUser({ learnerIdHash: "8B968EB9A0CD90755F702A152FB8BF813939760B94236AD29093449B7B04E864" });
+    setCertificates([
+      {
+        _id: "1",
+        course: "React Basics",
+        issuer: "MyInstitute",
+        certHash: "6B185E13F92562769407E3C8E7B10B5C157116CB9E9EE8485E1A3E60FCA72806",
+      },
+    ]);
+  }, []);
+
+  const fetchBlockchainData = async (learnerIdHash: string, certHash: string) => {
+    setLoadingChain((prev) => ({ ...prev, [certHash]: true }));
+
+    try {
+      const res = await fetch("/api/blockchain-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ learnerIdHash: "0x" + learnerIdHash, certHash: "0x" + certHash }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to fetch blockchain data");
+
+      setBlockchainData((prev) => ({ ...prev, [certHash]: data }));
+    } catch (err) {
+      console.error(err);
+      setBlockchainData((prev) => ({ ...prev, [certHash]: null }));
+    } finally {
+      setLoadingChain((prev) => ({ ...prev, [certHash]: false }));
+    }
+  };
 
   return (
-    <main className="container mx-auto px-4 py-8">
-      <div className="mb-8 space-y-1">
-        <h1 className="text-balance text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
-          My Credentials
-        </h1>
-        <p className="text-pretty text-sm text-muted-foreground">
-          All your verified certificates in one place. Click to open their verification details.
-        </p>
-      </div>
+    <div className="space-y-6 bg-black min-h-screen p-6 text-white">
+      <h1 className="text-2xl font-bold mb-4">My Certificates</h1>
+      {certificates.map((cert) => (
+        <div key={cert._id} className="border border-white rounded-lg p-6 shadow-md bg-gray-900">
+          <h3 className="font-semibold text-xl mb-1">{cert.course}</h3>
+          <p className="text-gray-300 mb-2">Issued by: {cert.issuer}</p>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {credentials.map((c) => (
-          <CredentialCard key={c.id} credential={c} />
-        ))}
-      </div>
-    </main>
-  )
+          <button
+            className={`mt-2 px-4 py-2 rounded font-medium ${
+              loadingChain[cert.certHash] ? "bg-gray-700 cursor-not-allowed" : "bg-white text-black hover:bg-gray-200"
+            }`}
+            onClick={() => fetchBlockchainData(user?.learnerIdHash || "", cert.certHash)}
+            disabled={loadingChain[cert.certHash]}
+          >
+            {loadingChain[cert.certHash] ? "Fetching blockchain..." : "Show blockchain details"}
+          </button>
+
+          {blockchainData[cert.certHash] && (
+            <div className="mt-4 p-4 bg-gray-800 border border-gray-600 rounded-lg space-y-2">
+              <p><span className="font-medium">Certificate Hash:</span> {blockchainData[cert.certHash]?.certHash}</p>
+              <p><span className="font-medium">Course Hash:</span> {blockchainData[cert.certHash]?.courseHash}</p>
+              <p><span className="font-medium">Issuer Hash:</span> {blockchainData[cert.certHash]?.issuerHash}</p>
+              <p><span className="font-medium">Issued On:</span> {new Date((blockchainData[cert.certHash]?.issuedOn || 0) * 1000).toLocaleDateString()}</p>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
 }
