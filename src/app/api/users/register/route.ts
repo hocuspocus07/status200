@@ -4,6 +4,9 @@ import User from "@/models/user";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
+import { v4 as uuidv4 } from "uuid";
+import { ethers } from "ethers";
+
 const JWT_SECRET = process.env.JWT_SECRET || "jwt_secret";
 
 export async function POST(req: NextRequest) {
@@ -11,7 +14,7 @@ export async function POST(req: NextRequest) {
     await dbConnect();
 
     const body = await req.json();
-    const { name, email, password} = body;
+    const { name, email, password } = body;
 
     if (!name || !email || !password) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -25,12 +28,22 @@ export async function POST(req: NextRequest) {
     // Hash password
     const password_hash = await bcrypt.hash(password, 10);
 
+    // Generate UUID for learnerId
+    const uuid = uuidv4();
+
+    // Compute keccak256 hash for blockchain learnerId
+    const learnerIdHash = ethers.keccak256(ethers.toUtf8Bytes(uuid));
+    console.log("Generated learnerId (UUID):", uuid);
+    console.log("Computed learnerId (keccak256):", learnerIdHash);
+
     const user = await User.create({
       name,
       email,
       password_hash,
+      uuid: uuid,
+      learnerIdHash: learnerIdHash
     });
-    const token = jwt.sign({ id: user._id, email: user.email }, JWT_SECRET, { expiresIn: "7d" });
+    const token = jwt.sign({ id: user._id, email: user.email, learnerIdHash: user.learnerIdHash }, JWT_SECRET, { expiresIn: "7d" });
 
     return NextResponse.json({
       message: "User registered successfully",
@@ -39,11 +52,14 @@ export async function POST(req: NextRequest) {
         id: user._id,
         name: user.name,
         email: user.email,
+        uuid: user.uuid,
+        learnerIdHash: user.learnerIdHash,
+
       }
     }, { status: 201 });
 
   } catch (error: unknown) {
-    if(error instanceof Error){
+    if (error instanceof Error) {
       console.error("Register error:", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
