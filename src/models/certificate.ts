@@ -13,6 +13,8 @@ export interface ICertificate extends Document {
   digital_signature: string;
   original_verification_link?: string;
   original_digital_signature?: string;
+  blockchain_certificate_hash?: string;
+  transaction_hash?: string;
 }
 
 export const CertificateSchema = new Schema<ICertificate>({
@@ -28,4 +30,6 @@ export const CertificateSchema = new Schema<ICertificate>({
   digital_signature: { type: String, required: true },
   original_verification_link: { type: String },
   original_digital_signature: { type: String },
+  blockchain_certificate_hash: { type: String },
+  transaction_hash: { type: String },
 });
