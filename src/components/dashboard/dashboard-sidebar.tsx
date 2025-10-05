@@ -17,6 +17,7 @@ import {
   ChevronRight,
   Menu,
   User,
+  MessageCircleMore,
 } from "lucide-react"
 import { DashboardProfile } from "@/components/dashboard/dashboard-profile"
 
@@ -25,6 +26,7 @@ const navigation = [
   { name: "My Credentials", href: "/dashboard/my-credentials", icon: Award, count: 12 },
   { name: "Verification", href: "/dashboard/verification", icon: FileText },
   { name: "Network", href: "/dashboard/network", icon: Users },
+  {name: "Messages", href: "/dashboard/inbox", icon: MessageCircleMore, count: 4},
 ]
 
 export function DashboardSidebar() {

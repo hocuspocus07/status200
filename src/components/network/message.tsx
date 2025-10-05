@@ -1,103 +1,172 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Check, CheckCheck } from "lucide-react"
+import { ProfileSheet } from "./profile-sheet"
 
-type ChatMessage = { id: string; role: "me" | "them"; text: string; ts: number }
+type ChatMessage = { id: string; role: "me" | "them"; text: string; ts: number; read?: boolean }
 type NetworkUser = {
-  id: string
-  name: string
-  title: string
-  location: string
-  skills: string[]
-  verified: boolean
-  bio: string
-  lastActive: string
-  avatar: string
+    id: string
+    name: string
+    title: string
+    location: string
+    skills: string[]
+    verified: boolean
+    bio: string
+    lastActive: string
+    avatar: string
 }
 
 export function MessageDialog({
-  user,
-  onOpenChange,
+    user,
+    onOpenChange,
 }: {
-  user: NetworkUser | null
-  onOpenChange: (open: boolean) => void
+    user: NetworkUser | null
+    onOpenChange: (open: boolean) => void
 }) {
-  const open = Boolean(user)
-  const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [input, setInput] = useState("")
-  const bottomRef = useRef<HTMLDivElement>(null)
+    const open = Boolean(user)
+    const [messages, setMessages] = useState<ChatMessage[]>([])
+    const [input, setInput] = useState("")
+    const bottomRef = useRef<HTMLDivElement>(null)
+    const [signedInUser, setSignedInUser] = useState<{ id: string; name: string; email: string } | null>(null)
+    const [chatUser, setChatUser] = useState<NetworkUser | null>(null) // for DM
+    const [profileUser, setProfileUser] = useState<NetworkUser | null>(null) // for profile popup
 
-  useEffect(() => {
-    if (user) {
-      setMessages([
-        { id: "m1", role: "them", text: `Hi, I'm ${user.name}. Happy to connect!`, ts: Date.now() - 1000 * 60 * 3 },
-        { id: "m2", role: "me", text: "Great to meet you!", ts: Date.now() - 1000 * 60 * 2 },
-      ])
-    } else {
-      setMessages([])
+
+    const senderId = signedInUser?.id
+
+    useEffect(() => {
+        const fetchUser = async () => {
+            const token = localStorage.getItem("token")
+            if (!token) return window.location.href = "/login"
+
+            try {
+                const response = await fetch("/api/users/me", {
+                    headers: { 'Authorization': `Bearer ${token}` },
+                })
+                if (!response.ok) return window.location.href = "/login"
+                const data = await response.json()
+                setSignedInUser(data.user)
+            } catch {
+                localStorage.removeItem("token")
+                window.location.href = "/login"
+            }
+        }
+        fetchUser()
+    }, [])
+
+    // Fetch messages
+    useEffect(() => {
+        if (user && senderId) {
+            fetch("/api/users/messages/get-messages", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ user1: senderId, user2: user.id }),
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.messages) {
+                        const formatted = data.messages.map((m: any) => ({
+                            id: m._id,
+                            role: m.sender._id === senderId ? "me" : "them",
+                            text: m.content,
+                            ts: new Date(m.created_at).getTime(),
+                            read: m.read,
+                        }))
+                        setMessages(formatted)
+                    }
+                })
+        } else {
+            setMessages([])
+        }
+    }, [user, senderId])
+
+    useEffect(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), [messages, open])
+
+    async function send() {
+        const text = input.trim()
+        if (!text || !user || !senderId) return
+        const newMsg: ChatMessage = { id: crypto.randomUUID(), role: "me", text, ts: Date.now(), read: false }
+        setMessages(prev => [...prev, newMsg])
+        setInput("")
+
+        await fetch("/api/users/messages/post-message", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ senderId, receiverId: user.id, content: text }),
+        })
     }
-  }, [user])
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages, open])
+    return (
+        <>
+            <Dialog open={open} onOpenChange={onOpenChange}>
+                <DialogTitle className="hidden">Profile</DialogTitle>
+                <DialogContent className="max-w-xl p-0 rounded-xl">
+                    {user && (
+                        <>
+                            {/* Header */}
+                            <div
+                                className="flex items-center gap-3 p-4 bg-muted/10 border-b cursor-pointer"
+                            >
+                                <Avatar className="h-10 w-10" onClick={() => setProfileUser(user)}>
+                                    <AvatarImage src={user.avatar || "/placeholder.svg"} />
+                                    <AvatarFallback>{user.name.slice(0, 2).toUpperCase()}</AvatarFallback>
+                                </Avatar>
 
-  function send() {
-    const text = input.trim()
-    if (!text) return
-    setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: "me", text, ts: Date.now() }])
-    setInput("")
-  }
+                                <div onClick={() => setProfileUser(user)} className="flex flex-col">
+                                    <p className="font-semibold">{user.name}</p>
+                                    <p className="text-xs text-muted-foreground">{user.title}</p>
+                                </div>
+                            </div>
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        {user && (
-          <>
-            <DialogHeader>
-              <DialogTitle>Chat with {user.name}</DialogTitle>
-            </DialogHeader>
 
-            <Separator />
+                            <Separator />
 
-            <ScrollArea className="h-64 mt-3 rounded-md border">
-              <div className="p-3 flex flex-col gap-2">
-                {messages.map((m) => (
-                  <div key={m.id} className={m.role === "me" ? "self-end max-w-[80%]" : "self-start max-w-[80%]"}>
-                    <div
-                      className={
-                        m.role === "me"
-                          ? "rounded-lg bg-primary text-primary-foreground px-3 py-2"
-                          : "rounded-lg bg-muted text-foreground px-3 py-2"
-                      }
-                    >
-                      <div className="text-sm">{m.text}</div>
-                    </div>
-                  </div>
-                ))}
-                <div ref={bottomRef} />
-              </div>
-            </ScrollArea>
+                            {/* Messages */}
+                            <ScrollArea className="h-72 md:h-96 p-2">
+                                <div className="flex flex-col gap-2">
+                                    {messages.map(m => (
+                                        <div key={m.id} className={`flex ${m.role === "me" ? "justify-end" : "justify-start"}`}>
+                                            <div className={`max-w-[70%] p-2 rounded-lg ${m.role === "me" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"} flex items-end gap-1`}>
+                                                <span className="text-sm">{m.text}</span>
+                                                {/* Ticks */}
+                                                {m.role === "me" && (
+                                                    <span>{m.read ? <CheckCheck className="w-4 h-4 text-blue-500" /> : <Check className="w-4 h-4 text-muted-foreground" />}</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                    <div ref={bottomRef} />
+                                </div>
+                            </ScrollArea>
 
-            <div className="mt-3 flex items-center gap-2">
-              <Input
-                placeholder="Type your message…"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") send()
+                            {/* Input */}
+                            <div className="flex gap-2 p-4 border-t">
+                                <Input placeholder="Type a message…" value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && send()} />
+                                <Button onClick={send}>Send</Button>
+                            </div>
+                        </>
+                    )}
+                </DialogContent>
+            </Dialog>
+
+            {/* Profile Popup */}
+            <ProfileSheet
+                user={profileUser}
+                onOpenChange={(open) => {
+                    if (!open) setProfileUser(null) // close profile
                 }}
-              />
-              <Button onClick={send}>Send</Button>
-            </div>
-          </>
-        )}
-      </DialogContent>
-    </Dialog>
-  )
+                onMessage={() => {
+                    if (profileUser) setChatUser(profileUser)
+                }}
+            />
+
+        </>
+    )
 }
