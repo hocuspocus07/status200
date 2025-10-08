@@ -14,7 +14,7 @@ type UploadDropzoneProps = {
 }
 
 export function UploadDropzone({
-  accept = "application/pdf",
+  accept = "image/jpeg, image/png, image/gif, image/webp",
   onChange,
   value,
   className,
@@ -31,8 +31,8 @@ export function UploadDropzone({
   const handleFiles = (files: FileList | null) => {
     if (!files || files.length === 0) return
     const file = files[0]
-    const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")
-    if (!isPdf) {
+const isImage = file.type.startsWith("image/") ||
+  /\.(jpe?g|png|gif|webp|svg)$/i.test(file.name);    if (!isImage) {
       onChange?.(null)
       return
     }
@@ -91,7 +91,7 @@ export function UploadDropzone({
         ) : (
           <>
             <span className="text-sm text-muted-foreground">
-              Drag & drop your PDF here or click below
+              Drag & drop your Image file here or click below
             </span>
             <Button type="button" variant="secondary" className="mt-2">
               Browse files
@@ -100,7 +100,7 @@ export function UploadDropzone({
         )}
         <input
           ref={inputRef}
-          type="file"
+          type="image"
           accept={accept}
           className="sr-only"
           onChange={(e) => handleFiles(e.target.files)}

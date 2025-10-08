@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import {NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import dbConnect from "@/lib/dbConnect";
 import User from "@/models/user";
@@ -16,17 +16,14 @@ const getUserIdFromToken = (request: Request): string | null => {
   }
 };
 
-export async function DELETE(
-  request: Request,
-  { params }: { params: { educationId: string } }
-) {
+export async function DELETE(request: NextRequest, context: { params: Promise<{ educationId: string }> }) {
   try {
     const userId = getUserIdFromToken(request);
     if (!userId) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const { educationId } = params;
+  const { educationId } = await context.params
     if (!educationId) {
       return NextResponse.json({ message: "Education ID is required" }, { status: 400 });
     }

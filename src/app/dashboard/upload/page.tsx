@@ -60,7 +60,7 @@ export default function VerifyPage() {
       return
     }
     if (!file) {
-      toast("Please upload your certificate PDF.")
+      toast("Please upload your certificate.")
       return
     }
 
@@ -85,7 +85,7 @@ export default function VerifyPage() {
             Verify a Certificate
           </h1>
           <p className="text-pretty text-sm text-muted-foreground">
-            Upload your certificate PDF and provide details to get it verified and added to your credentials.
+            Upload your certificate image and provide details to get it verified and added to your credentials.
           </p>
         </div>
         <Button asChild variant="ghost" className="hidden md:inline-flex">

@@ -9,7 +9,7 @@ import { ThemeToggle } from "@/components/theme-toggle"
 const dashboardLinks = [
   { name: "Dashboard", href: "/dashboard", icon: Home },
   { name: "My Credentials", href: "/dashboard/my-credentials", icon: Award },
-  { name: "Verification", href: "/dashboard/verification", icon: FileText },
+  { name: "Upload", href: "/dashboard/upload", icon: FileText },
   { name: "Network", href: "/dashboard/network", icon: Users },
 ]
 

@@ -24,7 +24,7 @@ import { DashboardProfile } from "@/components/dashboard/dashboard-profile"
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: Home },
   { name: "My Credentials", href: "/dashboard/my-credentials", icon: Award, count: 12 },
-  { name: "Verification", href: "/dashboard/verification", icon: FileText },
+  { name: "Upload a certificate", href: "/dashboard/upload", icon: FileText },
   { name: "Network", href: "/dashboard/network", icon: Users },
   {name: "Messages", href: "/dashboard/inbox", icon: MessageCircleMore, count: 4},
 ]
