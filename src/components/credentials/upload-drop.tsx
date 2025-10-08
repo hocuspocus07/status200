@@ -1,9 +1,10 @@
 "use client"
 
 import * as React from "react"
-import { cn } from "../../lib/utils"
-import { Button } from "../ui/button"
+import { cn } from "@/lib/utils" 
+import { Button } from "@/components/ui/button" 
 import { X } from "lucide-react"
+import { toast } from "sonner"
 
 type UploadDropzoneProps = {
   accept?: string
@@ -52,7 +53,7 @@ const isImage = file.type.startsWith("image/") ||
       <div
         role="button"
         tabIndex={0}
-        aria-label="Upload PDF"
+        aria-label="Upload Image"
         onClick={onBrowse}
         onDrop={onDrop}
         onDragOver={(e) => {
@@ -91,7 +92,7 @@ const isImage = file.type.startsWith("image/") ||
         ) : (
           <>
             <span className="text-sm text-muted-foreground">
-              Drag & drop your Image file here or click below
+              Drag & drop your image file here or click below
             </span>
             <Button type="button" variant="secondary" className="mt-2">
               Browse files
@@ -100,7 +101,7 @@ const isImage = file.type.startsWith("image/") ||
         )}
         <input
           ref={inputRef}
-          type="image"
+          type="file"
           accept={accept}
           className="sr-only"
           onChange={(e) => handleFiles(e.target.files)}

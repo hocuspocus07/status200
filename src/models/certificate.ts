@@ -1,4 +1,4 @@
-import { Schema, Document } from "mongoose";
+import mongoose, { Schema, Document } from "mongoose";
 
 export interface ICertificate extends Document {
   issued_to: string;
@@ -27,3 +27,5 @@ export const CertificateSchema = new Schema<ICertificate>({
   blockchain_certificate_hash: { type: String },
   transaction_hash: { type: String },
 });
+
+export default mongoose.models.Certificate || mongoose.model<ICertificate>("Certificate", CertificateSchema);

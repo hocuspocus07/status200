@@ -1,7 +1,6 @@
 "use client"
 
 import * as React from "react"
-import Link from "next/link"
 import { useForm } from "react-hook-form"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -13,6 +12,11 @@ import { UploadDropzone } from "@/components/credentials/upload-drop"
 
 type VerifyValues = {
   name: string
+  issued_to: string
+  issued_by: string
+  passed_at: string
+  verification_link: string
+  nsqf_level?: string
   syllabus: string
   outcomes: string
   jobs: string
@@ -21,13 +25,28 @@ type VerifyValues = {
   projects?: string
 }
 
+type CertificateData = {
+  _id: string;
+  course: string;
+  issued_to: string;
+  is_verified: boolean;
+  createdAt: string;
+};
+
 export default function VerifyPage() {
   const [file, setFile] = React.useState<File | null>(null)
   const [submitting, setSubmitting] = React.useState(false)
+  const [certificates, setCertificates] = React.useState<CertificateData[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
 
   const form = useForm<VerifyValues>({
     defaultValues: {
       name: "",
+      issued_to: "",
+      issued_by: "",
+      passed_at: "",
+      verification_link: "",
+      nsqf_level: "",
       syllabus: "",
       outcomes: "",
       jobs: "",
@@ -38,44 +57,61 @@ export default function VerifyPage() {
     mode: "onBlur",
   })
 
-  const onSubmit = async (values: VerifyValues) => {
-    if (!values.name || values.name.trim().length < 2) {
-      toast("Course/Certificate name is required")
-      return
-    }
-    if (!values.syllabus || values.syllabus.trim().length < 10) {
-      toast("Syllabus is required")
-      return
-    }
-    if (!values.outcomes || values.outcomes.trim().length < 10) {
-      toast("Course outcomes are required")
-      return
-    }
-    if (!values.jobs || values.jobs.trim().length < 10) {
-      toast("Job opportunities are required")
-      return
-    }
-    if (values.credits !== undefined && (isNaN(values.credits) || values.credits < 0)) {
-      toast("Credits must be a non-negative number")
-      return
-    }
-    if (!file) {
-      toast("Please upload your certificate.")
-      return
-    }
-
+  const fetchCertificates = async () => {
     try {
-      setSubmitting(true)
-      await new Promise((r) => setTimeout(r, 900))
-      toast("Your certificate has been submitted for verification.")
-      form.reset()
-      setFile(null)
-    } catch {
-      toast("Please try again later.")
+      setIsLoading(true);
+      const response = await fetch('/api/certificate/get');
+      if (!response.ok) throw new Error('Failed to fetch certificates');
+      const data = await response.json();
+      setCertificates(data.certificates);
+    } catch (error) {
+      toast.error('Could not load recent submissions.');
     } finally {
-      setSubmitting(false)
+      setIsLoading(false);
     }
-  }
+  };
+
+  React.useEffect(() => {
+    fetchCertificates();
+  }, []);
+
+  const onSubmit = async (values: VerifyValues) => {
+    if (!values.name) { toast.error("Course/Certificate name is required"); return; }
+    if (!values.issued_to) { toast.error("Issued To field is required"); return; }
+    if (!values.issued_by) { toast.error("Issued By field is required"); return; }
+    if (!values.passed_at) { toast.error("Date of passing is required"); return; }
+    if (!values.verification_link) { toast.error("Verification link is required"); return; }
+    if (!values.syllabus) { toast.error("Syllabus is required"); return; }
+    if (!values.outcomes) { toast.error("Course outcomes are required"); return; }
+    if (!values.jobs) { toast.error("Job opportunities are required"); return; }
+    if (!file) { toast.error("Please upload your PDF certificate."); return; }
+
+    setSubmitting(true);
+    try {
+      const formData = new FormData();
+      formData.append("certificate", file);
+      formData.append("course", values.name);
+      formData.append("issued_to", values.issued_to);
+      formData.append("issued_by", values.issued_by);
+      formData.append("passed_at", values.passed_at);
+      formData.append("verification_link", values.verification_link);
+      if (values.nsqf_level) formData.append("nsqf_level", values.nsqf_level);
+      
+      const response = await fetch("/api/certificate/add", { method: "POST", body: formData });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Submission failed");
+
+      toast.success(result.message || "Certificate submitted successfully.");
+      form.reset();
+      setFile(null);
+      await fetchCertificates();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+      toast.error(`Submission failed: ${errorMessage}`);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <main className="container mx-auto px-4 py-8">
@@ -85,11 +121,11 @@ export default function VerifyPage() {
             Verify a Certificate
           </h1>
           <p className="text-pretty text-sm text-muted-foreground">
-            Upload your certificate image and provide details to get it verified and added to your credentials.
+            Upload your certificate and provide details to get it verified.
           </p>
         </div>
         <Button asChild variant="ghost" className="hidden md:inline-flex">
-          <Link href="/credentials">My Credentials</Link>
+          <a href="/credentials">My Credentials</a>
         </Button>
       </div>
 
@@ -106,126 +142,102 @@ export default function VerifyPage() {
               <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
                 <UploadDropzone value={file} onChange={setFile} />
 
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Course/Certificate name*</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g. Data Analytics Professional Certificate" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
+                <FormField control={form.control} name="name" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Course/Certificate Name*</FormLabel>
+                    <FormControl><Input placeholder="e.g., Certified Cloud Practitioner" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <FormField
-                    control={form.control}
-                    name="duration"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Duration</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g. 6 months" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="credits"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Credits acquired</FormLabel>
-                        <FormControl>
-                          <Input
-                            inputMode="numeric"
-                            placeholder="e.g. 12"
-                            {...field}
-                            onChange={(e) =>
-                              field.onChange(e.target.value ? Number(e.target.value) : undefined)
-                            }
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <FormField control={form.control} name="issued_to" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Issued To*</FormLabel>
+                      <FormControl><Input placeholder="e.g., John Doe" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name="issued_by" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Issued By*</FormLabel>
+                      <FormControl><Input placeholder="e.g., Amazon Web Services" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
                 </div>
-
-                <FormField
-                  control={form.control}
-                  name="syllabus"
-                  render={({ field }) => (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <FormField control={form.control} name="passed_at" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Syllabus*</FormLabel>
-                      <FormControl>
-                        <Textarea rows={5} placeholder="Outline the key topics covered in the course..." {...field} />
-                      </FormControl>
+                      <FormLabel>Date of Passing*</FormLabel>
+                      <FormControl><Input type="date" {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="outcomes"
-                  render={({ field }) => (
+                  )} />
+                  <FormField control={form.control} name="nsqf_level" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Course outcomes*</FormLabel>
-                      <FormControl>
-                        <Textarea rows={5} placeholder="List the learning outcomes achieved..." {...field} />
-                      </FormControl>
+                      <FormLabel>NSQF Level (Optional)</FormLabel>
+                      <FormControl><Input placeholder="e.g., 7" {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
-                  )}
-                />
+                  )} />
+                </div>
+                <FormField control={form.control} name="verification_link" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Verification Link*</FormLabel>
+                    <FormControl><Input placeholder="https://www.credly.com/your-badge-link" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
 
-                <FormField
-                  control={form.control}
-                  name="jobs"
-                  render={({ field }) => (
+                <hr/>
+                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <FormField control={form.control} name="duration" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Job opportunities*</FormLabel>
-                      <FormControl>
-                        <Textarea rows={4} placeholder="Describe the roles this prepares you for..." {...field} />
-                      </FormControl>
+                      <FormLabel>Duration</FormLabel>
+                      <FormControl><Input placeholder="e.g. 6 months" {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="projects"
-                  render={({ field }) => (
+                  )} />
+                  <FormField control={form.control} name="credits" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Projects completed during course</FormLabel>
-                      <FormControl>
-                        <Textarea rows={4} placeholder="Briefly describe notable projects completed..." {...field} />
-                      </FormControl>
+                      <FormLabel>Credits acquired</FormLabel>
+                      <FormControl><Input inputMode="numeric" placeholder="e.g. 12" {...field} onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)} /></FormControl>
                       <FormMessage />
                     </FormItem>
-                  )}
-                />
-
+                  )} />
+                </div>
+                <FormField control={form.control} name="syllabus" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Syllabus*</FormLabel>
+                    <FormControl><Textarea rows={5} placeholder="Outline the key topics covered in the course..." {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="outcomes" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Course outcomes*</FormLabel>
+                    <FormControl><Textarea rows={5} placeholder="List the learning outcomes achieved..." {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="jobs" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Job opportunities*</FormLabel>
+                    <FormControl><Textarea rows={4} placeholder="Describe the roles this prepares you for..." {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="projects" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Projects completed during course</FormLabel>
+                    <FormControl><Textarea rows={4} placeholder="Briefly describe notable projects completed..." {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                
                 <div className="flex items-center justify-end gap-2">
-                  <Button
-                    type="reset"
-                    variant="ghost"
-                    onClick={() => {
-                      form.reset()
-                      setFile(null)
-                    }}
-                  >
-                    Reset
-                  </Button>
-                  <Button type="submit" disabled={submitting}>
-                    {submitting ? "Submitting..." : "Submit for Verification"}
-                  </Button>
+                  <Button type="reset" variant="ghost" onClick={() => { form.reset(); setFile(null); }}>Reset</Button>
+                  <Button type="submit" disabled={submitting}>{submitting ? "Submitting..." : "Submit for Verification"}</Button>
                 </div>
               </form>
             </Form>
@@ -235,22 +247,45 @@ export default function VerifyPage() {
         <Card className="transition-all hover:shadow-sm">
           <CardHeader>
             <CardTitle className="text-foreground">Guidelines</CardTitle>
-            <CardDescription className="text-muted-foreground">Tips to speed up verification</CardDescription>
+            <CardDescription className="text-muted-foreground">Tips for submission</CardDescription>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground space-y-3">
             <p>- Ensure your uploaded file is a valid PDF.</p>
-            <p>- Provide a clear syllabus and concise, outcome-focused details.</p>
-            <p>- Include any project summaries and credits if applicable.</p>
-            <p>
-              - You can review verified items in{" "}
-              <Link className="underline underline-offset-4" href="/credentials">
-                My Credentials
-              </Link>
-              .
-            </p>
+            <p>- Fill in all required fields accurately.</p>
+            <p>- The verification link should be publicly accessible.</p>
+            <p>- You can review verified items in <a className="underline underline-offset-4" href="/credentials">My Credentials</a>.</p>
           </CardContent>
         </Card>
       </div>
+
+      {/* Section to Display Submitted Certificates */}
+      <div className="mt-12">
+        <h2 className="text-2xl font-semibold tracking-tight text-foreground">Recent Submissions</h2>
+        <div className="mt-4">
+          {isLoading ? (<p className="text-muted-foreground">Loading submissions...</p>) 
+          : certificates.length === 0 ? (<p className="text-muted-foreground">No submissions yet.</p>) 
+          : (
+            <div className="space-y-4">
+              {certificates.map((cert) => (
+                <Card key={cert._id} className="transition-all hover:shadow-sm">
+                  <CardContent className="p-4 flex items-center justify-between">
+                    <div>
+                      <p className="font-semibold text-foreground">{cert.course}</p>
+                      <p className="text-sm text-muted-foreground">
+                        To: {cert.issued_to} | Submitted: {new Date(cert.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className={`px-3 py-1 text-xs font-medium rounded-full ${cert.is_verified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                      {cert.is_verified ? 'Verified' : 'Pending'}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </main>
-  )
+  );
 }
+
