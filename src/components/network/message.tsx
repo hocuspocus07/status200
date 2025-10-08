@@ -9,25 +9,14 @@ import { Separator } from "@/components/ui/separator"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Check, CheckCheck } from "lucide-react"
 import { ProfileSheet } from "./profile-sheet"
-
+import { ProfileData } from "./types"
 type ChatMessage = { id: string; role: "me" | "them"; text: string; ts: number; read?: boolean }
-type NetworkUser = {
-    id: string
-    name: string
-    title: string
-    location: string
-    skills: string[]
-    verified: boolean
-    bio: string
-    lastActive: string
-    avatar: string
-}
 
 export function MessageDialog({
     user,
     onOpenChange,
 }: {
-    user: NetworkUser | null
+    user: ProfileData | null
     onOpenChange: (open: boolean) => void
 }) {
     const open = Boolean(user)
@@ -35,8 +24,8 @@ export function MessageDialog({
     const [input, setInput] = useState("")
     const bottomRef = useRef<HTMLDivElement>(null)
     const [signedInUser, setSignedInUser] = useState<{ id: string; name: string; email: string } | null>(null)
-    const [chatUser, setChatUser] = useState<NetworkUser | null>(null) // for DM
-    const [profileUser, setProfileUser] = useState<NetworkUser | null>(null) // for profile popup
+    const [chatUser, setChatUser] = useState<ProfileData | null>(null)
+    const [profileUser, setProfileUser] = useState<ProfileData | null>(null) // for profile popup
 
 
     const senderId = signedInUser?.id
@@ -61,13 +50,12 @@ export function MessageDialog({
         fetchUser()
     }, [])
 
-    // Fetch messages
     useEffect(() => {
         if (user && senderId) {
             fetch("/api/users/messages/get-messages", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ user1: senderId, user2: user.id }),
+                body: JSON.stringify({ user1: senderId, user2: user._id }),
             })
                 .then(res => res.json())
                 .then(data => {
@@ -99,7 +87,7 @@ export function MessageDialog({
         await fetch("/api/users/messages/post-message", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ senderId, receiverId: user.id, content: text }),
+            body: JSON.stringify({ senderId, receiverId: user._id, content: text }),
         })
     }
 

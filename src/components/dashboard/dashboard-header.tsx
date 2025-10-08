@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Bell, Search, Plus } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import Link from "next/link"
 
 export function DashboardHeader() {
   return (
@@ -24,8 +25,10 @@ export function DashboardHeader() {
           </div>
 
           <Button size="sm" className="animate-fade-in-up">
+            <Link href={"/dashboard/verification"} className="flex items-center">
             <Plus className="h-4 w-4 md:mr-2" />
             <span className="hidden md:inline">Add Credential</span>
+          </Link>
           </Button>
 
           {/* Notifications */}

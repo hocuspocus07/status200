@@ -1,31 +1,24 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import User from "@/models/user";
+import { getUserIdFromToken } from "../profile/route";
 
-export async function GET(req: NextRequest) {
+export async function GET(request: Request) {
   try {
+    const loggedInUserId = getUserIdFromToken(request);
+    if (!loggedInUserId) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
     await dbConnect();
 
-    const users = await User.find({}, { password_hash: 0 }).lean();
+    const users = await User.find({ _id: { $ne: loggedInUserId } })
+      .select("name headline location about skills profile isVerified") 
+      .lean();
 
-    const networkUsers = users.map((u) => ({
-      id: (u._id as any).toString(),
-      name: u.name,
-      title: u.profile?.username || "No title",
-      location: u.profile?.location || "Unknown",
-      skills: u.educations?.map((e:any) => e.field) || [], 
-      verified: !!u.socials?.linkedin || false,
-      bio: u.profile?.bio || "",
-      lastActive: u.updated_at?.toISOString() || new Date().toISOString(),
-      avatar: u.profile?.avatar || "/placeholder.svg",
-    }));
-
-    return NextResponse.json(networkUsers);
+    return NextResponse.json({ users });
   } catch (error) {
-    console.error("Error fetching users:", error);
-    return NextResponse.json(
-      { success: false, message: "Server error while fetching users" },
-      { status: 500 }
-    );
+    console.error("GET /api/users Error:", error);
+    return NextResponse.json({ message: "Internal Server Error" }, { status: 500 });
   }
 }

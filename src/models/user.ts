@@ -6,8 +6,12 @@ export interface IUser extends Document {
   name: string;
   email: string;
   password_hash: string;
+  about?: string;
+  location?:string,
+  headline?:string,
   uuid: string;           // New field
   learnerIdHash: string;  // New field
+  skills?: string[];
   profile?: {
     avatar?: string;
     username?: string;
@@ -16,6 +20,7 @@ export interface IUser extends Document {
     linkedin?: string;
     github?: string;
     x?: string;
+    website?:string,
   };
   educations?: IEducation[];
   certificates?: ICertificate[];
@@ -27,6 +32,9 @@ const UserSchema = new Schema<IUser>(
   {
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true, lowercase: true },
+    about: { type: String },
+    location: { type: String },
+    headline: { type: String },
     password_hash: { type: String, required: true },
     uuid: { type: String, required: true, unique: true },          // New
     learnerIdHash: { type: String, required: true, unique: true }, // New
@@ -38,7 +46,9 @@ const UserSchema = new Schema<IUser>(
       linkedin: String,
       github: String,
       x: String,
+      website: String,
     },
+    skills: { type: [String], default: [] },
     educations: [EducationSchema],
     certificates: [CertificateSchema],
   },
