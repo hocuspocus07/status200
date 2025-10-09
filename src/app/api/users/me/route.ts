@@ -27,6 +27,7 @@ export async function GET(req: NextRequest) {
         id: user._id,
         name: user.name,
         email: user.email,
+        learnerIdHash: user.learnerIdHash,
         profile: user.profile,
         socials: user.socials
       }

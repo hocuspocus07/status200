@@ -1,32 +1,31 @@
 // src/lib/server/blockchain.ts
 import { ethers } from "ethers";
+import fs from "fs";
+import path from "path";
 
 // Private RPC key (do NOT expose to frontend)
 const RPC_URL = process.env.RPC_URL!;
-const CONTRACT_ADDRESS = "0x5F0893E3D0BF816D3AEd212217fa7BDc7330C92A";
+const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS!;
+const PRIVATE_KEY = process.env.PRIVATE_KEY!;
 
-// ✅ Initialize provider and contract (server-side only)
+
+
+const abiPath = path.join(process.cwd(),"src","lib","server", "contractAbi.json");
+const abi = JSON.parse(fs.readFileSync(abiPath, "utf8"));
+
 const provider = new ethers.JsonRpcProvider(RPC_URL);
+const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
+const contract = new ethers.Contract(CONTRACT_ADDRESS, abi, wallet);
 
-const contractAbi = [
-  {
-    inputs: [
-      { internalType: "bytes32", name: "learnerIdHash", type: "bytes32" },
-      { internalType: "bytes32", name: "certHash", type: "bytes32" },
-    ],
-    name: "verifyCertificate",
-    outputs: [
-      { internalType: "bytes32", name: "", type: "bytes32" },
-      { internalType: "bytes32", name: "", type: "bytes32" },
-      { internalType: "bytes32", name: "", type: "bytes32" },
-      { internalType: "uint256", name: "", type: "uint256" },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-];
+interface CertificateData {
+  learnerIdHash: string;
+  certUrl: string;
+  courseName: string;
+  issuingBody: string;
+  issuedOn: number; // Timestamp
+}
 
-const contract = new ethers.Contract(CONTRACT_ADDRESS, contractAbi, provider);
+
 
 export async function verifyCertificateServer(learnerIdHash: string, certHash: string) {
   try {
@@ -44,5 +43,39 @@ export async function verifyCertificateServer(learnerIdHash: string, certHash: s
   } catch (err: any) {
     console.error("Blockchain verify error:", err);
     throw new Error(err?.message || "Verification failed");
+  }
+}
+
+
+export async function addCertificateToBlockchain({
+  learnerIdHash,
+  certUrl,
+  courseName,
+  issuingBody,
+  issuedOn,
+}: CertificateData) {
+  try {
+    // Hash certificate info
+    const certHash = ethers.keccak256(ethers.toUtf8Bytes(certUrl));
+    const courseIdHash = ethers.keccak256(ethers.toUtf8Bytes(courseName));
+    const issuerIdHash = ethers.keccak256(ethers.toUtf8Bytes(issuingBody));
+
+    // Call smart contract
+    const tx = await contract.addCertificate(
+      learnerIdHash,
+      certHash,
+      courseIdHash,
+      issuerIdHash,
+      issuedOn
+    );
+
+    const receipt = await tx.wait();
+    console.log("Blockchain tx receipt:", receipt);
+    
+    // Return the transaction hash and other data
+    return { success: true, txHash: receipt.hash, certHash };
+  } catch (error: any) {
+    console.error("Blockchain helper error:", error);
+    return { success: false, error: error.message };
   }
 }
