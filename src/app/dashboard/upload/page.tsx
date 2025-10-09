@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { toast } from "sonner"
 import { UploadDropzone } from "@/components/credentials/upload-drop"
+import { VerificationResult, VerificationResultDialog } from "@/components/credentials/verify-credential"
 
 type VerifyValues = {
   name: string
@@ -38,6 +39,8 @@ export default function VerifyPage() {
   const [submitting, setSubmitting] = React.useState(false)
   const [certificates, setCertificates] = React.useState<CertificateData[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [isResultModalOpen, setIsResultModalOpen] = React.useState(false);
+  const [verificationResult, setVerificationResult] = React.useState<VerificationResult | null>(null);
 
   const form = useForm<VerifyValues>({
     defaultValues: {
@@ -87,6 +90,8 @@ export default function VerifyPage() {
     if (!file) { toast.error("Please upload your PDF certificate."); return; }
 
     setSubmitting(true);
+    let submissionToastId: string | number | undefined;
+
     try {
       const formData = new FormData();
       formData.append("certificate", file);
@@ -96,196 +101,227 @@ export default function VerifyPage() {
       formData.append("passed_at", values.passed_at);
       formData.append("verification_link", values.verification_link);
       if (values.nsqf_level) formData.append("nsqf_level", values.nsqf_level);
-      
+
       const response = await fetch("/api/certificate/add", { method: "POST", body: formData });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Submission failed");
 
-      toast.success(result.message || "Certificate submitted successfully.");
+      submissionToastId = toast.success(result.message || "Certificate submitted successfully.", {
+        description: "Now running AI verification...",
+      });
+
+      const aiFormData = new FormData();
+      aiFormData.append("file", file);
+
+      const aiResponse = await fetch("http://localhost:5000/verify", { //this has to be changed based on api endpoint
+        method: "POST",
+        body: aiFormData,
+      });
+
+      const aiResult = await aiResponse.json();
+      if (!aiResponse.ok || aiResult.status !== 'success') {
+        throw new Error(aiResult.message || "AI verification failed.");
+      }
+      toast.success("AI Verification Complete!", { id: submissionToastId });
+
+      setVerificationResult(aiResult);
+      setIsResultModalOpen(true);
+
       form.reset();
       setFile(null);
       await fetchCertificates();
+
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-      toast.error(`Submission failed: ${errorMessage}`);
+      if (submissionToastId) {
+        toast.error(`Operation failed: ${errorMessage}`, { id: submissionToastId });
+      } else {
+        toast.error(`Submission failed: ${errorMessage}`);
+      }
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <main className="container mx-auto px-4 py-8">
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-balance text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
-            Verify a Certificate
-          </h1>
-          <p className="text-pretty text-sm text-muted-foreground">
-            Upload your certificate and provide details to get it verified.
-          </p>
+    <> 
+      <VerificationResultDialog
+        isOpen={isResultModalOpen}
+        onOpenChange={setIsResultModalOpen}
+        result={verificationResult}
+      />
+
+      <main className="container mx-auto px-4 py-8">
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-balance text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
+              Verify a Certificate
+            </h1>
+            <p className="text-pretty text-sm text-muted-foreground">
+              Upload your certificate and provide details to get it verified.
+            </p>
+          </div>
+          <Button asChild variant="ghost" className="hidden md:inline-flex">
+            <a href="/credentials">My Credentials</a>
+          </Button>
         </div>
-        <Button asChild variant="ghost" className="hidden md:inline-flex">
-          <a href="/credentials">My Credentials</a>
-        </Button>
-      </div>
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-        <Card className="md:col-span-2 transition-all hover:shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-foreground">Verification Form</CardTitle>
-            <CardDescription className="text-muted-foreground">
-              Fields marked with an asterisk are required.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Form {...form}>
-              <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
-                <UploadDropzone value={file} onChange={setFile} />
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+          <Card className="md:col-span-2 transition-all hover:shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-foreground">Verification Form</CardTitle>
+              <CardDescription className="text-muted-foreground">
+                Fields marked with an asterisk are required.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Form {...form}>
+                <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
+                  <UploadDropzone value={file} onChange={setFile} />
 
-                <FormField control={form.control} name="name" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Course/Certificate Name*</FormLabel>
-                    <FormControl><Input placeholder="e.g., Certified Cloud Practitioner" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <FormField control={form.control} name="issued_to" render={({ field }) => (
+                  <FormField control={form.control} name="name" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Issued To*</FormLabel>
-                      <FormControl><Input placeholder="e.g., John Doe" {...field} /></FormControl>
+                      <FormLabel>Course/Certificate Name*</FormLabel>
+                      <FormControl><Input placeholder="e.g., Certified Cloud Practitioner" {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )} />
-                  <FormField control={form.control} name="issued_by" render={({ field }) => (
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <FormField control={form.control} name="issued_to" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Issued To*</FormLabel>
+                        <FormControl><Input placeholder="e.g., John Doe" {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField control={form.control} name="issued_by" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Issued By*</FormLabel>
+                        <FormControl><Input placeholder="e.g., Amazon Web Services" {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  </div>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <FormField control={form.control} name="passed_at" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Date of Passing*</FormLabel>
+                        <FormControl><Input type="date" {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField control={form.control} name="nsqf_level" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>NSQF Level (Optional)</FormLabel>
+                        <FormControl><Input placeholder="e.g., 7" {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  </div>
+                  <FormField control={form.control} name="verification_link" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Issued By*</FormLabel>
-                      <FormControl><Input placeholder="e.g., Amazon Web Services" {...field} /></FormControl>
+                      <FormLabel>Verification Link*</FormLabel>
+                      <FormControl><Input placeholder="https://www.credly.com/your-badge-link" {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )} />
-                </div>
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <FormField control={form.control} name="passed_at" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Date of Passing*</FormLabel>
-                      <FormControl><Input type="date" {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name="nsqf_level" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>NSQF Level (Optional)</FormLabel>
-                      <FormControl><Input placeholder="e.g., 7" {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                </div>
-                <FormField control={form.control} name="verification_link" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Verification Link*</FormLabel>
-                    <FormControl><Input placeholder="https://www.credly.com/your-badge-link" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
 
-                <hr/>
-                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <FormField control={form.control} name="duration" render={({ field }) => (
+                  <hr />
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <FormField control={form.control} name="duration" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Duration</FormLabel>
+                        <FormControl><Input placeholder="e.g. 6 months" {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField control={form.control} name="credits" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Credits acquired</FormLabel>
+                        <FormControl><Input inputMode="numeric" placeholder="e.g. 12" {...field} onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  </div>
+                  <FormField control={form.control} name="syllabus" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Duration</FormLabel>
-                      <FormControl><Input placeholder="e.g. 6 months" {...field} /></FormControl>
+                      <FormLabel>Syllabus*</FormLabel>
+                      <FormControl><Textarea rows={5} placeholder="Outline the key topics covered in the course..." {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )} />
-                  <FormField control={form.control} name="credits" render={({ field }) => (
+                  <FormField control={form.control} name="outcomes" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Credits acquired</FormLabel>
-                      <FormControl><Input inputMode="numeric" placeholder="e.g. 12" {...field} onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)} /></FormControl>
+                      <FormLabel>Course outcomes*</FormLabel>
+                      <FormControl><Textarea rows={5} placeholder="List the learning outcomes achieved..." {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )} />
-                </div>
-                <FormField control={form.control} name="syllabus" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Syllabus*</FormLabel>
-                    <FormControl><Textarea rows={5} placeholder="Outline the key topics covered in the course..." {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="outcomes" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Course outcomes*</FormLabel>
-                    <FormControl><Textarea rows={5} placeholder="List the learning outcomes achieved..." {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="jobs" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Job opportunities*</FormLabel>
-                    <FormControl><Textarea rows={4} placeholder="Describe the roles this prepares you for..." {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="projects" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Projects completed during course</FormLabel>
-                    <FormControl><Textarea rows={4} placeholder="Briefly describe notable projects completed..." {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                
-                <div className="flex items-center justify-end gap-2">
-                  <Button type="reset" variant="ghost" onClick={() => { form.reset(); setFile(null); }}>Reset</Button>
-                  <Button type="submit" disabled={submitting}>{submitting ? "Submitting..." : "Submit for Verification"}</Button>
-                </div>
-              </form>
-            </Form>
-          </CardContent>
-        </Card>
+                  <FormField control={form.control} name="jobs" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Job opportunities*</FormLabel>
+                      <FormControl><Textarea rows={4} placeholder="Describe the roles this prepares you for..." {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name="projects" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Projects completed during course</FormLabel>
+                      <FormControl><Textarea rows={4} placeholder="Briefly describe notable projects completed..." {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
 
-        <Card className="transition-all hover:shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-foreground">Guidelines</CardTitle>
-            <CardDescription className="text-muted-foreground">Tips for submission</CardDescription>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground space-y-3">
-            <p>- Ensure your uploaded file is a valid PDF.</p>
-            <p>- Fill in all required fields accurately.</p>
-            <p>- The verification link should be publicly accessible.</p>
-            <p>- You can review verified items in <a className="underline underline-offset-4" href="/credentials">My Credentials</a>.</p>
-          </CardContent>
-        </Card>
-      </div>
+                  <div className="flex items-center justify-end gap-2">
+                    <Button type="reset" variant="ghost" onClick={() => { form.reset(); setFile(null); }}>Reset</Button>
+                    <Button type="submit" disabled={submitting}>{submitting ? "Submitting..." : "Submit for Verification"}</Button>
+                  </div>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
 
-      {/* Section to Display Submitted Certificates */}
-      <div className="mt-12">
-        <h2 className="text-2xl font-semibold tracking-tight text-foreground">Recent Submissions</h2>
-        <div className="mt-4">
-          {isLoading ? (<p className="text-muted-foreground">Loading submissions...</p>) 
-          : certificates.length === 0 ? (<p className="text-muted-foreground">No submissions yet.</p>) 
-          : (
-            <div className="space-y-4">
-              {certificates.map((cert) => (
-                <Card key={cert._id} className="transition-all hover:shadow-sm">
-                  <CardContent className="p-4 flex items-center justify-between">
-                    <div>
-                      <p className="font-semibold text-foreground">{cert.course}</p>
-                      <p className="text-sm text-muted-foreground">
-                        To: {cert.issued_to} | Submitted: {new Date(cert.createdAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <div className={`px-3 py-1 text-xs font-medium rounded-full ${cert.is_verified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                      {cert.is_verified ? 'Verified' : 'Pending'}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+          <Card className="transition-all hover:shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-foreground">Guidelines</CardTitle>
+              <CardDescription className="text-muted-foreground">Tips for submission</CardDescription>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground space-y-3">
+              <p>- Ensure your uploaded file is a valid PDF.</p>
+              <p>- Fill in all required fields accurately.</p>
+              <p>- The verification link should be publicly accessible.</p>
+              <p>- You can review verified items in <a className="underline underline-offset-4" href="/credentials">My Credentials</a>.</p>
+            </CardContent>
+          </Card>
         </div>
-      </div>
-    </main>
+
+        <div className="mt-12">
+          <h2 className="text-2xl font-semibold tracking-tight text-foreground">Recent Submissions</h2>
+          <div className="mt-4">
+            {isLoading ? (<p className="text-muted-foreground">Loading submissions...</p>)
+              : certificates.length === 0 ? (<p className="text-muted-foreground">No submissions yet.</p>)
+                : (
+                  <div className="space-y-4">
+                    {certificates.map((cert) => (
+                      <Card key={cert._id} className="transition-all hover:shadow-sm">
+                        <CardContent className="p-4 flex items-center justify-between">
+                          <div>
+                            <p className="font-semibold text-foreground">{cert.course}</p>
+                            <p className="text-sm text-muted-foreground">
+                              To: {cert.issued_to} | Submitted: {new Date(cert.createdAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <div className={`px-3 py-1 text-xs font-medium rounded-full ${cert.is_verified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                            {cert.is_verified ? 'Verified' : 'Pending'}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+          </div>
+        </div>
+      </main>
+    </>
   );
 }
-
