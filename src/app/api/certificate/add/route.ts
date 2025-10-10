@@ -70,27 +70,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
     const passed_at = new Date(passed_at_string);
+    const shammonUrl: string = process.env.NEXT_PUBLIC_SHAMMON_MODEL as string;
+    const adnanUrl: string = process.env.NEXT_PUBLIC_ADNAN_MODEL as string;
 
     // ✅ CORRECTED: Create a specific FormData for the image model
     const imageFormData = new FormData();
-    imageFormData.append("certificate", certificateFile);
+    imageFormData.append("file", certificateFile);
 
     // 2. Call Cloudinary and both ML models concurrently
     const [
       uploadResult,
-      // verificationResult,
+      verificationResult,
       analysisResult
     ] = await Promise.all([
       uploadToCloudinary(certificateFile),
       
-      // // ML Model 1 (port 5000): Image verification
-      // fetch("http://localhost:5000/verify", {
-      //   method: "POST",
-      //   body: imageFormData, // Send only the relevant data
-      // }).then(res => res.json()),
+      // ML Model 1 (port 5000): Image verification
+      fetch(adnanUrl, {
+        method: "POST",
+        body: imageFormData, // Send only the relevant data
+      }).then(res => res.json()),
 
       // ✅ CORRECTED: Completed the JSON body for the text analysis model
-      fetch("http://localhost:8000/predict", { 
+      fetch(shammonUrl, { 
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -105,6 +107,7 @@ export async function POST(req: NextRequest) {
         }),
       }).then(res => res.json())
     ]);
+    console.log("Verification Result:", verificationResult);
 
     // 3. Consolidate all data for MongoDB
     const newCertificateData = {
@@ -114,14 +117,14 @@ export async function POST(req: NextRequest) {
       passed_at,
       verification_link,
       bucket_image_url: uploadResult.secure_url,
-      is_verified: /*verificationResult.is_verified || false,*/ true,
+      is_verified: !verificationResult.analysis.decision.is_suspicious,
       nsqf_level: analysisResult.nsqf_level,
       confidence: analysisResult.confidence,
-      tags: analysisResult.tags,
+      tags:analysisResult.tags,
       keywords: analysisResult.keywords,
-      reasons_for_failure: /*verificationResult.reasons_for_failure || [],*/ ["testing model 2"]
+      reasons_for_failure: verificationResult.analysis.decision.reasons || [],
     };
-    console.log("model analysis result:", analysisResult);
+    // console.log("model analysis result:", analysisResult);
 
     console.log("New Certificate Data:", newCertificateData);
 

@@ -5,14 +5,13 @@ export interface ICertificate extends Document {
   issued_by: string;
   course: string;
   passed_at: Date;
-  is_verified: boolean; // This will be set by the model at localhost:5000
+  is_verified: boolean;
   verification_link: string;
   bucket_image_url?: string;
-  nsqf_level?: number; // Updated type from ML model
+  nsqf_level?: number;
   blockchain_certificate_hash?: string;
   transaction_hash?: string;
   reasons_for_failure?: string[];
-  // --- New fields for ML model data ---
   confidence?: number;
   tags?: string[];
   keywords?: string[];
@@ -30,7 +29,6 @@ export const CertificateSchema = new Schema<ICertificate>({
   blockchain_certificate_hash: { type: String },
   transaction_hash: { type: String },
   nsqf_level: { type: Number },
-  // --- New fields for ML model data ---
   confidence: { type: Number },
   tags: { type: [String], default: [] },
   keywords: { type: [String], default: [] },

@@ -17,7 +17,7 @@ interface Certificate {
   nsqf_level?: string;
   blockchain_certificate_hash?: string;
   reasons_for_failure?: string[];
-  transaction_hash?: string; // ✅ 1. Added transaction_hash field
+  transaction_hash?: string;
 }
 interface BlockchainData {
   certHash: string;
@@ -93,9 +93,8 @@ const CertificateModal = ({
           <button onClick={onClose} className="text-gray-400 text-2xl leading-none hover:text-white">&times;</button>
         </div>
 
-        {/* Modal Content */}
         <div className="overflow-y-auto p-6 space-y-6">
-          {/* Certificate Details Section */}
+  
           <div>
             <h3 className="text-lg font-semibold text-white mb-4">Certificate Details</h3>
             {certificate.bucket_image_url && (
@@ -139,7 +138,6 @@ const CertificateModal = ({
                     <p><span className="font-medium text-gray-400">Issued On:</span> {new Date(blockchainData.issuedOn * 1000).toLocaleString()}</p>
                   </div>
                 )}
-                {/* ✅ 2. Added PolygonScan transaction link */}
                 {certificate.transaction_hash && (
                   <a
                     href={`https://amoy.polygonscan.com/tx/${certificate.transaction_hash}`}
@@ -171,7 +169,7 @@ export default function MyCertificatesPage() {
   useEffect(() => {
     const initializePage = async () => {
       setIsLoading(true);
-      const token = localStorage.getItem("token"); // ⚠️ Use your actual token key
+      const token = localStorage.getItem("token");
       if (!token) {
         toast.error("You are not logged in.");
         setIsLoading(false);

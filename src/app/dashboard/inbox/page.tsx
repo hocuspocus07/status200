@@ -122,12 +122,12 @@ export default function InboxPage() {
         user={
           selectedUser
             ? {
-                id: selectedUser._id,
+                _id: selectedUser._id,
                 name: selectedUser.name,
                 title: "",
                 location: "",
                 skills: [],
-                verified: false,
+                is_verified: false,
                 bio: "",
                 lastActive: "",
                 avatar: selectedUser.profile?.avatar || "",
