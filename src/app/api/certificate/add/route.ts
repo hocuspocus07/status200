@@ -12,8 +12,8 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-const FORGERY_MODEL = process.env.NEXT_PUBLIC_FORGERY_MODEL || "http://localhost:5000";
-const NSQF_MODEL = process.env.NEXT_PUBLIC_NSQF_MODEL || "http://localhost:8000";
+const FORGERY_MODEL_URL = process.env.NEXT_PUBLIC_FORGERY_MODEL || "http://localhost:5000";
+const NSQF_MODEL_URL = process.env.NEXT_PUBLIC_NSQF_MODEL || "http://localhost:8000";
 
 const uploadToCloudinary = (file: File): Promise<{ secure_url: string, public_id: string }> => {
   return new Promise((resolve, reject) => {
@@ -73,8 +73,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
     const passed_at = new Date(passed_at_string);
-    const shammonUrl: string = process.env.NEXT_PUBLIC_SHAMMON_MODEL as string;
-    const adnanUrl: string = process.env.NEXT_PUBLIC_ADNAN_MODEL as string;
 
     // ✅ CORRECTED: Create a specific FormData for the image model
     const imageFormData = new FormData();
@@ -89,13 +87,13 @@ export async function POST(req: NextRequest) {
       uploadToCloudinary(certificateFile),
       
       // ML Model 1 (port 5000): Image verification
-      fetch(adnanUrl, {
+      fetch(`${FORGERY_MODEL_URL}/analyze-forgery`, {
         method: "POST",
         body: imageFormData, // Send only the relevant data
       }).then(res => res.json()),
 
       // ✅ CORRECTED: Completed the JSON body for the text analysis model
-      fetch(shammonUrl, { 
+      fetch(`${NSQF_MODEL_URL}/predict`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
