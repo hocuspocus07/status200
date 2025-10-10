@@ -39,99 +39,133 @@ const uploadToCloudinary = (file: File): Promise<{ secure_url: string, public_id
 };
 
 
-export async function POST(req: NextRequest) { // Use NextRequest to access headers
+export async function POST(req: NextRequest) {
   try {
     await dbConnect();
 
-    // 1. Get the user ID from the token
+    // 1. Get user and form data
     const userId = getDataFromToken(req);
-
-    // 2. Find the user in the database
     const user = await User.findById(userId);
     if (!user) {
-      return NextResponse.json({ error: "User not found. Authorization failed." }, { status: 404 });
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     const formData = await req.formData();
     const certificateFile = formData.get("certificate") as File | null;
-
+    const course = formData.get("course") as string;
     const issued_to = formData.get("issued_to") as string;
     const issued_by = formData.get("issued_by") as string;
-    const course = formData.get("course") as string;
-    const nsqf_level = formData.get("nsqf_level") as string | null;
     const passed_at_string = formData.get("passed_at") as string;
     const verification_link = formData.get("verification_link") as string;
+    const syllabus = formData.get("syllabus") as string;
+    const outcomes = formData.get("outcomes") as string;
+    const jobs = formData.get("jobs") as string;
+    
+    // ✅ ADDED: Retrieve optional fields for the second ML model
+    const duration = formData.get("duration") as string | null;
+    const credits = formData.get("credits") as string | null;
+    const projects = formData.get("projects") as string | null;
 
-    if (!certificateFile) {
-      return NextResponse.json({ error: "Certificate file is required" }, { status: 400 });
-    }
-
-    if (!issued_to || !issued_by || !course || !passed_at_string || !verification_link) {
+    if (!certificateFile || !course || !issued_to || !issued_by || !passed_at_string || !verification_link || !syllabus || !outcomes || !jobs) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
-
     const passed_at = new Date(passed_at_string);
-    if (isNaN(passed_at.getTime())) {
-      return NextResponse.json({ error: "Invalid date format for 'passed_at'. Please use ISO format." }, { status: 400 });
-    }
 
-    // Upload file to Cloudinary
-    const uploadResult = await uploadToCloudinary(certificateFile);
+    // ✅ CORRECTED: Create a specific FormData for the image model
+    const imageFormData = new FormData();
+    imageFormData.append("certificate", certificateFile);
 
-    // 3. Create a new certificate *object* (not a model instance)
+    // 2. Call Cloudinary and both ML models concurrently
+    const [
+      uploadResult,
+      // verificationResult,
+      analysisResult
+    ] = await Promise.all([
+      uploadToCloudinary(certificateFile),
+      
+      // // ML Model 1 (port 5000): Image verification
+      // fetch("http://localhost:5000/verify", {
+      //   method: "POST",
+      //   body: imageFormData, // Send only the relevant data
+      // }).then(res => res.json()),
+
+      // ✅ CORRECTED: Completed the JSON body for the text analysis model
+      fetch("http://localhost:8000/predict", { 
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          courseName: course,
+          syllabus: syllabus,
+          courseOutcomes: outcomes,
+          jobOpportunities: jobs,
+          duration: duration || "",
+          credits: credits || "",
+          // Assuming projects are entered as a comma-separated string in the textarea
+          projects: projects ? projects.split(',').map(p => p.trim()) : [],
+        }),
+      }).then(res => res.json())
+    ]);
+
+    // 3. Consolidate all data for MongoDB
     const newCertificateData = {
+      course,
       issued_to,
       issued_by,
-      course,
-      nsqf_level: nsqf_level || undefined,
       passed_at,
       verification_link,
       bucket_image_url: uploadResult.secure_url,
-      // You can set other default values here if needed
+      is_verified: /*verificationResult.is_verified || false,*/ true,
+      nsqf_level: analysisResult.nsqf_level,
+      confidence: analysisResult.confidence,
+      tags: analysisResult.tags,
+      keywords: analysisResult.keywords,
+      reasons_for_failure: /*verificationResult.reasons_for_failure || [],*/ ["testing model 2"]
     };
+    console.log("model analysis result:", analysisResult);
 
-    // 4. Push the new certificate object into the user's certificates array
+    console.log("New Certificate Data:", newCertificateData);
+
+    // 4. Save the initial certificate data to the user
     user.certificates.push(newCertificateData);
-
-
-    // 5. Save the updated user document
     await user.save();
-
-    // 6. Call the blockchain helper function directly
-    const blockchainResult = await addCertificateToBlockchain({
-      learnerIdHash: user.learnerIdHash, // Get from the user object
-      certUrl: uploadResult.secure_url,
-      courseName: course,
-      issuingBody: issued_by,
-      issuedOn: Math.floor(passed_at.getTime() / 1000),
-    });
-    console.log("Blockchain result:", blockchainResult);
-
-    if (!blockchainResult.success) {
-      console.error("Blockchain addition failed:", blockchainResult.error);
-      return NextResponse.json(
-        { error: "Certificate saved but failed to add to blockchain", details: blockchainResult.error },
-        { status: 500 }
-      );
-    }
     
-    // 7. Update the certificate with the blockchain hash and save again
+    let message = "Certificate submitted and processing complete.";
     const addedCertificate = user.certificates[user.certificates.length - 1];
-    addedCertificate.blockchain_certificate_hash = blockchainResult.certHash;
-    addedCertificate.transaction_hash = blockchainResult.txHash;
-    await user.save();
-    
-    return NextResponse.json(
-      { message: "Certificate submitted and added to blockchain successfully", certificate: addedCertificate },
-      { status: 201 }
-    );
+
+    // 5. Conditionally add to blockchain ONLY if verified
+    if (newCertificateData.is_verified) {
+        console.log("Certificate is verified, proceeding to add to blockchain.");
+        const blockchainResult = await addCertificateToBlockchain({
+            learnerIdHash: user.learnerIdHash,
+            certUrl: uploadResult.secure_url,
+            courseName: course,
+            issuingBody: issued_by,
+            issuedOn: Math.floor(passed_at.getTime() / 1000),
+        });
+
+        if (blockchainResult.success) {
+            addedCertificate.blockchain_certificate_hash = blockchainResult.certHash;
+            addedCertificate.transaction_hash = blockchainResult.txHash;
+            await user.save();
+            message = "Certificate successfully verified and added to blockchain.";
+            console.log("Successfully added to blockchain with txHash:", blockchainResult.txHash);
+        } else {
+            console.error("Blockchain addition failed:", blockchainResult.error);
+            addedCertificate.reasons_for_failure?.push("Blockchain registration failed.");
+            await user.save();
+            message = "Certificate verified, but failed to register on blockchain.";
+        }
+    } else {
+        console.log("Certificate is not verified, skipping blockchain step.");
+        message = "Certificate processed, but did not pass automatic verification.";
+    }
+
+    // 6. Return a final success response
+    return NextResponse.json({ message, certificate: addedCertificate }, { status: 201 });
+
   } catch (error) {
     console.error("Error submitting certificate:", error);
     const errorMessage = error instanceof Error ? error.message : "An internal server error occurred";
-    // If the error is from the token helper, it's an auth issue
-    if (errorMessage === "No token provided" || errorMessage.includes("jwt")) {
-      return NextResponse.json({ error: "Authentication failed" }, { status: 401 });
-    }
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
