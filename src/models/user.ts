@@ -9,8 +9,8 @@ export interface IUser extends Document {
   about?: string;
   location?:string,
   headline?:string,
-  uuid: string;           // New field
-  learnerIdHash: string;  // New field
+  uuid: string;          
+  learnerIdHash: string;
   skills?: string[];
   profile?: {
     avatar?: string;
@@ -36,8 +36,8 @@ const UserSchema = new Schema<IUser>(
     location: { type: String },
     headline: { type: String },
     password_hash: { type: String, required: true },
-    uuid: { type: String, required: true, unique: true },          // New
-    learnerIdHash: { type: String, required: true, unique: true }, // New
+    uuid: { type: String, required: true, unique: true },          
+    learnerIdHash: { type: String, required: true, unique: true }, 
     profile: {
       avatar: String,
       username: String,
