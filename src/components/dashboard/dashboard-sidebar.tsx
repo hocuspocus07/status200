@@ -108,11 +108,7 @@ const [user, setUser] = useState<{ name: string; email: string } | null>(null)
               {!collapsed && (
                 <>
                   <span className="ml-3 flex-1">{item.name}</span>
-                  {item.count && (
-                    <Badge variant="secondary" className="ml-auto">
-                      {item.count}
-                    </Badge>
-                  )}
+                  
                 </>
               )}
             </Link>

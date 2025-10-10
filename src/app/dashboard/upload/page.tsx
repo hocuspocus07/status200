@@ -1,30 +1,31 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { useForm } from "react-hook-form"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { toast } from "sonner"
-import { UploadDropzone } from "@/components/credentials/upload-drop"
-import { VerificationResult, VerificationResultDialog } from "@/components/credentials/verify-credential"
+import * as React from "react";
+import { useForm } from "react-hook-form";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { toast } from "sonner";
+import { UploadDropzone } from "@/components/credentials/upload-drop";
+import { VerificationResult, VerificationResultDialog } from "@/components/credentials/verify-credential";
 
+// --- INTERFACES AND TYPES ---
 type VerifyValues = {
-  name: string
-  issued_to: string
-  issued_by: string
-  passed_at: string
-  verification_link: string
-  nsqf_level?: string
-  syllabus: string
-  outcomes: string
-  jobs: string
-  duration?: string
-  credits?: number
-  projects?: string
-}
+  name: string;
+  issued_to: string;
+  issued_by: string;
+  passed_at: string;
+  verification_link: string;
+  nsqf_level?: string;
+  syllabus: string;
+  outcomes: string;
+  jobs: string;
+  duration?: string;
+  credits?: number;
+  projects?: string;
+};
 
 type CertificateData = {
   _id: string;
@@ -35,8 +36,8 @@ type CertificateData = {
 };
 
 export default function VerifyPage() {
-  const [file, setFile] = React.useState<File | null>(null)
-  const [submitting, setSubmitting] = React.useState(false)
+  const [file, setFile] = React.useState<File | null>(null);
+  const [submitting, setSubmitting] = React.useState(false);
   const [certificates, setCertificates] = React.useState<CertificateData[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isResultModalOpen, setIsResultModalOpen] = React.useState(false);
@@ -58,33 +59,28 @@ export default function VerifyPage() {
       projects: "",
     },
     mode: "onBlur",
-  })
+  });
 
-  // ✅ UPDATED: Function to fetch certificates for the logged-in user
   const fetchCertificates = async () => {
     try {
       setIsLoading(true);
       const token = localStorage.getItem("token"); // ⚠️ Replace with your actual key
+      if (!token) return; // Silently fail if not logged in
 
-      // Use the correct, protected endpoint
       const response = await fetch('/api/certificate/get', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+        headers: { 'Authorization': `Bearer ${token}` },
       });
 
-
       if (!response.ok) {
-        
-        return toast.error("no certificates, found.");
+        setCertificates([]);
+        return;
       }
 
       const data = await response.json();
-      setCertificates(data.certificates);
+      setCertificates(data.certificates || []);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Could not fetch certificates.";
-      toast.error(errorMessage);
-      setCertificates([]); // Clear certificates on error
+      toast.error("Could not fetch recent submissions.");
+      setCertificates([]);
     } finally {
       setIsLoading(false);
     }
@@ -94,7 +90,7 @@ export default function VerifyPage() {
     fetchCertificates();
   }, []);
 
-  // ✅ UPDATED: Function to submit a new certificate for the logged-in user
+  // ✅ UPDATED: onSubmit now sends all required fields for both ML models
   const onSubmit = async (values: VerifyValues) => {
     if (!values.name) { toast.error("Course/Certificate name is required"); return; }
     if (!values.issued_to) { toast.error("Issued To field is required"); return; }
@@ -110,20 +106,29 @@ export default function VerifyPage() {
     let submissionToastId: string | number | undefined;
 
     try {
-      // Get the token to authenticate the submission
       const token = localStorage.getItem("token"); // ⚠️ Replace with your actual key
       if (!token) throw new Error("Authentication token not found. Please log in.");
 
       const formData = new FormData();
+      // --- Data for ML Model 1 (Image) and general info ---
       formData.append("certificate", file);
       formData.append("course", values.name);
       formData.append("issued_to", values.issued_to);
       formData.append("issued_by", values.issued_by);
       formData.append("passed_at", values.passed_at);
       formData.append("verification_link", values.verification_link);
-      if (values.nsqf_level) formData.append("nsqf_level", values.nsqf_level);
+      
+      // --- ADDED: Data for ML Model 2 (Text Analysis) ---
+      formData.append("syllabus", values.syllabus);
+      formData.append("outcomes", values.outcomes);
+      formData.append("jobs", values.jobs);
+      
+      // Append optional fields only if they have a value
+      if (values.duration) formData.append("duration", values.duration);
+      if (values.credits) formData.append("credits", values.credits.toString());
+      if (values.projects) formData.append("projects", values.projects);
 
-      // Use the correct, protected endpoint with the Authorization header
+
       const response = await fetch("/api/certificate/add", {
         method: "POST",
         headers: {
@@ -135,30 +140,11 @@ export default function VerifyPage() {
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Submission failed");
 
-      submissionToastId = toast.success(result.message || "Certificate submitted successfully.", {
-        description: "Now running AI verification...",
-      });
-
-      // --- AI Verification Logic (remains the same) ---
-      // const aiFormData = new FormData();
-      // aiFormData.append("file", file);
-      // const aiResponse = await fetch("http://localhost:5000/verify", {
-      //   method: "POST",
-      //   body: aiFormData,
-      // });
-      // const aiResult = await aiResponse.json();
-      // if (!aiResponse.ok || aiResult.status !== 'success') {
-      //   toast.error(aiResult.error || "AI verification failed. Requires manual overview.", { id: submissionToastId });
-      // } else {
-      //   toast.success("AI Verification Complete!", { id: submissionToastId });
-      // }
-      // setVerificationResult(aiResult.status);
-      // setIsResultModalOpen(true);
-      // // --- End of AI Logic ---
+      submissionToastId = toast.success(result.message || "Certificate submitted successfully!");
 
       form.reset();
       setFile(null);
-      await fetchCertificates(); // Refresh the list of certificates
+      await fetchCertificates();
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
@@ -180,7 +166,6 @@ export default function VerifyPage() {
         onOpenChange={setIsResultModalOpen}
         result={verificationResult}
       />
-      {/* ... The rest of your main component, cards, and form ... */}
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8 flex items-center justify-between">
           <div>

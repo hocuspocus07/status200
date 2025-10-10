@@ -13,9 +13,6 @@ export function DashboardHeader() {
       <div className="flex h-full items-center justify-between px-4 md:px-6 gap-2 md:gap-4">
         <div className="flex items-center space-x-2 md:space-x-4 min-w-0">
           <h1 className="text-lg md:text-xl font-semibold text-foreground truncate">Dashboard</h1>
-          <Badge variant="secondary" className="hidden sm:flex animate-pulse">
-            3 new credentials pending
-          </Badge>
         </div>
 
         <div className="flex items-center space-x-2 md:space-x-4">
