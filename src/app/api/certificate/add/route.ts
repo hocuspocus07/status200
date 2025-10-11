@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
     const credits = formData.get("credits") as string | null;
     const projects = formData.get("projects") as string | null;
 
-    if (!certificateFile || !course || !issued_to || !issued_by || !passed_at_string || !verification_link || !syllabus || !outcomes || !jobs) {
+    if (!certificateFile || !course || !issued_to || !issued_by || !passed_at_string || !syllabus || !outcomes || !jobs) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
     const passed_at = new Date(passed_at_string);
