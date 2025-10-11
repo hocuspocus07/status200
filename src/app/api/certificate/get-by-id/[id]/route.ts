@@ -22,7 +22,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     }
 
     // 4. Get target user ID from route parameter
-    const targetUserId = await params.id;
+    const targetUserId = params.id;
 
     // 5. Fetch the certificates for the target user
     const targetUser = await User.findById(targetUserId).select("certificates -_id");

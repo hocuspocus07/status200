@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator"
 import { ProfileData } from "./types";
 import type { Certificate } from "./types";
 import { useEffect, useState } from "react"
+import { ExternalLink } from "lucide-react" 
 
 export function ProfileSheet({
   user,
@@ -34,9 +35,6 @@ export function ProfileSheet({
       });
       const data = await response.json();
 
-      // console.log("Fetched certificates:", data);
-      // use this
-
       if (data.success) {
         setCertificates(data.certificates);
       }
@@ -44,6 +42,9 @@ export function ProfileSheet({
 
     if (user) {
       fetchCertificates();
+    }
+    return () => {
+        setCertificates([]);
     }
   }, [user]);
 
@@ -81,6 +82,36 @@ export function ProfileSheet({
                 )}
               </div>
             </div>
+
+            <div className="mt-4">
+              <h3 className="text-sm font-medium mb-2">Certificates</h3>
+              <div className="space-y-3">
+                {certificates && certificates.length > 0 ? (
+                  certificates.map((cert) => (
+                    <div key={cert._id} className="flex items-start justify-between gap-3">
+                      <div className="flex-1">
+                        <p className="font-semibold text-sm">{cert.course}</p>
+                        <p className="text-xs text-muted-foreground">{cert.issued_by}</p>
+                      </div>
+                      {cert.verification_link && (
+                        <a
+                          href={cert.verification_link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-muted-foreground hover:text-primary transition-colors"
+                          aria-label={`View certificate for ${cert.course}`}
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </a>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">No certificates to display.</p>
+                )}
+              </div>
+            </div>
+
             <div className="mt-6 flex justify-end gap-2">
               <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
               <Button onClick={onMessage}>Message</Button>
