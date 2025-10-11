@@ -6,18 +6,46 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { ProfileData } from "./types";
+import type { Certificate } from "./types";
+import { useEffect, useState } from "react"
 
 export function ProfileSheet({
   user,
   onOpenChange,
   onMessage,
 }: {
-  user: ProfileData | null 
+  user: ProfileData | null
   onOpenChange: (open: boolean) => void
   onMessage: () => void
 }) {
   const open = Boolean(user)
   const initials = user?.name.split(" ").map((n) => n[0]).slice(0, 2).join("") ?? ""
+
+  const [certificates, setCertificates] = useState<Certificate[]>([]);
+
+  useEffect(() => {
+    const fetchCertificates = async () => {
+      if (!user) return;
+
+      const response = await fetch(`/api/certificate/get-by-id/${user._id}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      const data = await response.json();
+
+      // console.log("Fetched certificates:", data);
+      // use this
+
+      if (data.success) {
+        setCertificates(data.certificates);
+      }
+    };
+
+    if (user) {
+      fetchCertificates();
+    }
+  }, [user]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
