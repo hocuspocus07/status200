@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import dbConnect from "@/lib/dbConnect";
 import User from "@/models/user"; 
+import { Types } from "mongoose"; // Import Types for ObjectId
 
 const getUserIdFromToken = (request: Request): string | null => {
   const authHeader = request.headers.get("Authorization");
@@ -11,6 +12,7 @@ const getUserIdFromToken = (request: Request): string | null => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { id: string };
     return decoded.id;
   } catch (error) {
+    console.error("JWT verification failed:", error);
     return null;
   }
 };
@@ -31,12 +33,9 @@ export async function POST(request: Request) {
 
     await dbConnect();
 
-    const user = await User.findById(userId);
-    if (!user) {
-      return NextResponse.json({ message: "User not found" }, { status: 404 });
-    }
-
+    // Create the new education object with a new ObjectId
     const newEducation = {
+      _id: new Types.ObjectId(), // Generate a new ID for the sub-document
       institute_name: institution,
       degree,
       field_of_study: field,
@@ -46,14 +45,33 @@ export async function POST(request: Request) {
       description,
     };
 
-    user.educations.unshift(newEducation as any); 
-    await user.save();
+    // Use findByIdAndUpdate with $push to avoid the validation error
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      {
+        $push: {
+          educations: {
+            $each: [newEducation], // $each is required to use $position
+            $position: 0 // This acts like unshift, adding to the start of the array
+          }
+        }
+      },
+      { new: true } // 'new: true' returns the modified doc
+    );
 
-    const addedEducation = user.educations[0];
+    if (!updatedUser) {
+      return NextResponse.json({ message: "User not found" }, { status: 404 });
+    }
+
+    // The added education is the one we just created
+    const addedEducation = newEducation;
 
     return NextResponse.json({ message: "Education added successfully", education: addedEducation }, { status: 201 });
   } catch (error) {
     console.error("POST /api/users/profile/education Error:", error);
+    if (error instanceof Error && error.name === 'ValidationError') {
+      return NextResponse.json({ message: "Validation Error", details: error.message }, { status: 400 });
+    }
     return NextResponse.json({ message: "Internal Server Error" }, { status: 500 });
   }
 }

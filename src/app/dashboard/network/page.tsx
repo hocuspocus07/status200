@@ -91,7 +91,6 @@ export default function NetworkPage() {
             <UserCard 
               key={u._id} 
               user={u} 
-              onOpenProfile={() => setSelectedUser(u)} 
               onMessage={() => setChatUser(u)} 
             />
           ))}
@@ -103,7 +102,7 @@ export default function NetworkPage() {
         </div>
       )}
 
-      <ProfileSheet 
+      <ProfileSheet
         user={selectedUser}
         onOpenChange={(open) => !open && setSelectedUser(null)}
         onMessage={() => {

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState,useEffect } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -19,21 +19,20 @@ import {
   User,
   MessageCircleMore,
 } from "lucide-react"
-import { DashboardProfile } from "@/components/dashboard/dashboard-profile"
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: Home },
   { name: "My Credentials", href: "/dashboard/my-credentials", icon: Award, count: 12 },
   { name: "Upload a certificate", href: "/dashboard/upload", icon: FileText },
   { name: "Network", href: "/dashboard/network", icon: Users },
-  {name: "Messages", href: "/dashboard/inbox", icon: MessageCircleMore, count: 4},
+  { name: "Messages", href: "/dashboard/inbox", icon: MessageCircleMore, count: 4 },
 ]
 
 export function DashboardSidebar() {
   const [collapsed, setCollapsed] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const pathname = usePathname()
-const [user, setUser] = useState<{ name: string; email: string } | null>(null)
+  const [user, setUser] = useState<{ name: string; email: string } | null>(null)
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -108,7 +107,7 @@ const [user, setUser] = useState<{ name: string; email: string } | null>(null)
               {!collapsed && (
                 <>
                   <span className="ml-3 flex-1">{item.name}</span>
-                  
+
                 </>
               )}
             </Link>
@@ -119,26 +118,25 @@ const [user, setUser] = useState<{ name: string; email: string } | null>(null)
       {/* User Profile */}
       {!collapsed && (
         <div className="border-t border-sidebar-border p-4">
-          <Dialog open={profileOpen} onOpenChange={setProfileOpen}>
-            <DialogTrigger asChild>
-              <button className="flex items-center space-x-3 w-full rounded-lg p-2 hover:bg-sidebar-accent transition-colors">
-                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <span className="text-sm font-medium text-primary">{user?.name[0]}</span>
-                </div>
-                <div className="flex-1 min-w-0 text-left">
-                  <p className="text-sm font-medium text-sidebar-foreground truncate">{user?.name}</p>
-                  <p className="text-xs text-sidebar-foreground/60 truncate">{user?.email}</p>
-                </div>
-                <User className="h-4 w-4 text-sidebar-foreground/60" />
-              </button>
-            </DialogTrigger>
-            <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>My Profile</DialogTitle>
-              </DialogHeader>
-              <DashboardProfile />
-            </DialogContent>
-          </Dialog>
+          <Link
+            href="/dashboard/my-profile"
+            className="flex items-center space-x-3 w-full rounded-lg p-2 hover:bg-sidebar-accent transition-colors"
+          >
+            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <span className="text-sm font-medium text-primary">
+                {user?.name?.[0]}
+              </span>
+            </div>
+            <div className="flex-1 min-w-0 text-left">
+              <p className="text-sm font-medium text-sidebar-foreground truncate">
+                {user?.name}
+              </p>
+              <p className="text-xs text-sidebar-foreground/60 truncate">
+                {user?.email}
+              </p>
+            </div>
+            <User className="h-4 w-4 text-sidebar-foreground/60" />
+          </Link>
         </div>
       )}
     </div>

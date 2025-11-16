@@ -5,12 +5,14 @@ export type ProfileData = {
   location?: string;
   avatar?: string,
   title?: string,
+  email?:string,
   about?: string;
   skills?: string[];
   profile?: {
     avatar?: string;
   };
   isVerified?: boolean;
+  created_at?:Date,
 };
 
 export interface Certificate {
