@@ -1,7 +1,7 @@
 "use client"
 
 import useSWR from "swr"
-import { useMemo, useState } from "react"
+import { useMemo, useState, useEffect } from "react"
 import { Filters, type NetworkFiltersState } from "@/components/network/filters"
 import { UserCard } from "@/components/network/user-card"
 import { ProfileSheet } from "@/components/network/profile-sheet"
@@ -9,8 +9,9 @@ import { MessageDialog } from "@/components/network/message"
 import { cn } from "@/lib/utils"
 import { Loader2 } from "lucide-react"
 import { ProfileData } from "@/components/network/types"
+import { ConnectionsTabs } from "@/components/network/connections"
 
-const fetcher = async(url: string) => {
+const fetcher = async (url: string) => {
   const token = localStorage.getItem("token");
   return fetch(url, {
     headers: { Authorization: `Bearer ${token}` }
@@ -19,18 +20,24 @@ const fetcher = async(url: string) => {
 
 export default function NetworkPage() {
   const { data, isLoading, error } = useSWR<{ users: ProfileData[] }>("/api/users/all", fetcher)
-  
+
   const [filters, setFilters] = useState<NetworkFiltersState>({
     query: "",
     role: "all",
     location: "all",
     verifiedOnly: false,
-    sort: "name", 
+    sort: "name",
   })
-  
+
   const [selectedUser, setSelectedUser] = useState<ProfileData | null>(null)
   const [chatUser, setChatUser] = useState<ProfileData | null>(null)
+  const [token, setToken] = useState<string | null>(null) // 3. Added token state
 
+  // 4. Added useEffect to get token from localStorage
+  useEffect(() => {
+    const storedToken = localStorage.getItem("token");
+    setToken(storedToken);
+  }, []);
   const filtered = useMemo(() => {
     console.log("Raw data from SWR:", data)
     if (!data?.users) return []
@@ -67,56 +74,61 @@ export default function NetworkPage() {
   }, [data, filters])
 
   return (
-    <main className={cn("px-4 py-6 md:px-8")}>
-      <section aria-labelledby="network-title" className="mb-6">
-        <h1 id="network-title" className="text-2xl font-semibold text-foreground text-balance">
-          Network
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          Discover professionals, filter by expertise or location, view profiles, and start a conversation.
-        </p>
-      </section>
+    <div className="flex w-full">
+      <main className={cn("px-4 py-6 md:px-8")}>
+        <section aria-labelledby="network-title" className="mb-6">
+          <h1 id="network-title" className="text-2xl font-semibold text-foreground text-balance">
+            Network
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Discover professionals, filter by expertise or location, view profiles, and start a conversation.
+          </p>
+        </section>
 
-      <Filters value={filters} onChange={setFilters} />
+        <Filters value={filters} onChange={setFilters} />
 
-      {error ? (
-        <div className="mt-6 text-center text-destructive">Failed to load users. Please try again later.</div>
-      ) : isLoading ? (
-        <div className="mt-6 flex justify-center text-muted-foreground">
-          <Loader2 className="h-8 w-8 animate-spin" />
-        </div>
-      ) : (
-        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((u) => (
-            <UserCard 
-              key={u._id} 
-              user={u} 
-              onMessage={() => setChatUser(u)} 
-            />
-          ))}
-          {filtered.length === 0 && !isLoading && (
-            <div className="text-muted-foreground col-span-full text-center">
-              No users match your filters.
-            </div>
-          )}
-        </div>
-      )}
+        {error ? (
+          <div className="mt-6 text-center text-destructive">Failed to load users. Please try again later.</div>
+        ) : isLoading ? (
+          <div className="mt-6 flex justify-center text-muted-foreground">
+            <Loader2 className="h-8 w-8 animate-spin" />
+          </div>
+        ) : (
+          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {filtered.map((u) => (
+              <UserCard
+                key={u._id}
+                user={u}
+                onMessage={() => setChatUser(u)}
+              />
+            ))}
+            {filtered.length === 0 && !isLoading && (
+              <div className="text-muted-foreground col-span-full text-center">
+                No users match your filters.
+              </div>
+            )}
+          </div>
+        )}
 
-      <ProfileSheet
-        user={selectedUser}
-        onOpenChange={(open) => !open && setSelectedUser(null)}
-        onMessage={() => {
-          if (selectedUser) {
-            setChatUser(selectedUser)
-            setSelectedUser(null)
-          }
-        }}
-      />
+        <ProfileSheet
+          user={selectedUser}
+          onOpenChange={(open) => !open && setSelectedUser(null)}
+          onMessage={() => {
+            if (selectedUser) {
+              setChatUser(selectedUser)
+              setSelectedUser(null)
+            }
+          }}
+        />
 
-      <MessageDialog 
-        user={chatUser} 
-        onOpenChange={(open) => !open && setChatUser(null)} 
-      />
-    </main>
+        <MessageDialog
+          user={chatUser}
+          onOpenChange={(open) => !open && setChatUser(null)}
+        />
+      </main>
+      <aside className="hidden lg:block w-80 shrink-0 sticky top-10 h-fit">
+        <ConnectionsTabs token={token} />
+      </aside>
+    </div>
   )
 }

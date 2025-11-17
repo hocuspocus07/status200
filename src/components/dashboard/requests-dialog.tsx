@@ -21,6 +21,7 @@ import {
   Check,
   X,
 } from "lucide-react";
+import Link from "next/link";
 
 // Interface for a user in the pending requests list
 interface RequesterUser {
@@ -139,8 +140,8 @@ export function IncomingRequestsDialog({
                 key={request._id}
                 className="flex items-center justify-between"
               >
-                <a
-                  href={`/users/${request.requester._id}`}
+                <Link
+                  href={`/dashboard/profiles/${request.requester._id}`}
                   className="flex items-center gap-3 group"
                 >
                   <Avatar>
@@ -157,7 +158,7 @@ export function IncomingRequestsDialog({
                       {request.requester.headline || "No headline"}
                     </p>
                   </div>
-                </a>
+                </Link>
                 <div className="flex gap-2">
                   <Button
                     variant="default"

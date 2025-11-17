@@ -20,7 +20,7 @@ export async function GET(
 
     const user = await User.findById(userId)
       .select(
-        "name email headline location about skills socials educations certificates isVerified profile.avatar uuid created_at"
+        "name email headline location about skills socials educations certificates isVerified profile.avatar uuid created_at isPublic"
       )
       .lean();
 

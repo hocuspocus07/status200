@@ -33,7 +33,8 @@ import {
   Link as LinkIcon,
   Info,
   MapPin,
-  GraduationCap
+  GraduationCap,
+  Lock
 } from "lucide-react";
 import {
   AlertDialog,
@@ -46,6 +47,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+
 interface Certificate {
   course: string;
   issued_by: string;
@@ -80,16 +82,17 @@ interface UserProfile {
   socials?: {
     website?: string;
   };
+  isPublic?: boolean;
 }
 
 type ConnectionStatus =
   | "idle"
   | "loading"
-  | "none"        // No connection
-  | "pending-in"  // They sent user a request
-  | "pending-out" // User sent them a request
+  | "none"         // No connection
+  | "pending-in"   // They sent user a request
+  | "pending-out"  // User sent them a request
   | "connected"
-  | "self";      
+  | "self";
 
 export default function UserProfilePage() {
   const [profileUserId, setProfileUserId] = useState<string | null>(null);
@@ -158,8 +161,9 @@ export default function UserProfilePage() {
           setLoading(false);
           return;
         }
+        console.log(json);
         setUser(json.data);
-        setLoading(false); 
+        setLoading(false);
       } catch (err) {
         setError("Could not fetch user profile.");
         setLoading(false);
@@ -226,7 +230,7 @@ export default function UserProfilePage() {
         const pendingIn = pendingRequests.find((r: any) => r.requester._id === profileUserId);
         if (pendingIn) {
           setConnectionStatus("pending-in");
-          setConnectionId(pendingIn._id); 
+          setConnectionId(pendingIn._id);
           return;
         }
 
@@ -335,8 +339,6 @@ export default function UserProfilePage() {
     }
 
     switch (connectionStatus) {
-      case "self":
-        return <Button variant="outline" size="sm">Edit Profile</Button>; // Or link to settings
       case "connected":
         return (
           <AlertDialog>
@@ -395,6 +397,13 @@ export default function UserProfilePage() {
       </div>
     );
   }
+  console.log("this", user.isPublic);
+  const isProfilePublic = user.isPublic ?? true;
+
+  const canViewProfileDetails =
+    isProfilePublic ||
+    connectionStatus === "connected" ||
+    connectionStatus === "self";
 
   const avatarFallback = user.name
     ? user.name.split(" ").map((n) => n[0]).join("").toUpperCase()
@@ -429,10 +438,10 @@ export default function UserProfilePage() {
               <AvatarFallback className="text-4xl">{avatarFallback}</AvatarFallback>
             </Avatar>
 
-            <div className="flex gap-2">
+            {(isProfilePublic || connectionStatus === "connected") && <div className="flex gap-2">
               {renderConnectionButtons()}
               <Button variant="default" size="sm">Message</Button>
-            </div>
+            </div>}
           </div>
 
           <div className="mt-6">
@@ -486,162 +495,173 @@ export default function UserProfilePage() {
         </div>
 
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 pb-20">
-          <Tabs defaultValue="certificates" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 max-w-md">
-              <TabsTrigger value="certificates">Certificates</TabsTrigger>
-              <TabsTrigger value="about">About</TabsTrigger>
-            </TabsList>
+          {canViewProfileDetails ? (
+            <Tabs defaultValue="certificates" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 max-w-md">
+                <TabsTrigger value="certificates">Certificates</TabsTrigger>
+                <TabsTrigger value="about">About</TabsTrigger>
+              </TabsList>
 
-            <TabsContent value="certificates" className="mt-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Award className="h-5 w-5" /> Verified Certificates
-                  </CardTitle>
-                  <CardDescription>Credentials earned by {user.name}</CardDescription>
-                </CardHeader>
-
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {user.certificates?.length ? (
-                    user.certificates.map((cert, i) => (
-                      <Card key={i} className="overflow-hidden shadow-lg hover:shadow-xl">
-                        <img
-                          src={cert.bucket_image_url}
-                          alt={cert.course}
-                          className="w-full h-48 object-cover"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.src = `https://placehold.co/600x400?text=${cert.course}`;
-                          }}
-                        />
-                        <CardHeader>
-                          <CardTitle className="text-lg">{cert.course}</CardTitle>
-                          <CardDescription>Issued by: {cert.issued_by}</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-2 text-sm">
-                          <div className="flex items-center gap-2">
-                            <BookMarked className="h-4 w-4" />
-                            NSQF Level: {cert.nsqf_level}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <CalendarDays className="h-4 w-4" />
-                            Passed: {formatDate(cert.passed_at)}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <UserCheck className="h-4 w-4" />
-                            Status:{" "}
-                            {cert.is_verified ? (
-                              <span className="text-green-500 font-semibold">Verified</span>
-                            ) : (
-                              <span className="text-yellow-500 font-semibold">Pending</span>
-                            )}
-                          </div>
-                          {cert.blockchain_certificate_hash && (
-                            <div className="flex items-center gap-2 text-xs pt-2">
-                              <LinkIcon className="h-3 w-3" />
-                              <span className="truncate">
-                                Hash: {cert.blockchain_certificate_hash}
-                              </span>
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    ))
-                  ) : (
-                    <p className="text-center text-gray-500 md:col-span-2">
-                      No certificates added yet.
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="about" className="mt-4">
-              <div className="space-y-6">
+              <TabsContent value="certificates" className="mt-4">
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <Info className="h-5 w-5" /> About
+                      <Award className="h-5 w-5" /> Verified Certificates
                     </CardTitle>
+                    <CardDescription>Credentials earned by {user.name}</CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    {user.about ? (
-                      <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                        {user.about}
-                      </p>
-                    ) : (
-                      <p className="text-center text-gray-500">
-                        No 'About' information provided.
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <GraduationCap className="h-5 w-5" /> Education
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {user.educations?.length ? (
-                      <ul className="space-y-4">
-                        {user.educations.map((edu) => (
-                          <li key={edu._id} className="flex gap-4">
-                            <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-                              <GraduationCap className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+                  <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {user.certificates?.length ? (
+                      user.certificates.map((cert, i) => (
+                        <Card key={i} className="overflow-hidden shadow-lg hover:shadow-xl">
+                          <img
+                            src={cert.bucket_image_url}
+                            alt={cert.course}
+                            className="w-full h-48 object-cover"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.src = `https://placehold.co/600x400?text=${cert.course}`;
+                            }}
+                          />
+                          <CardHeader>
+                            <CardTitle className="text-lg">{cert.course}</CardTitle>
+                            <CardDescription>Issued by: {cert.issued_by}</CardDescription>
+                          </CardHeader>
+                          <CardContent className="space-y-2 text-sm">
+                            <div className="flex items-center gap-2">
+                              <BookMarked className="h-4 w-4" />
+                              NSQF Level: {cert.nsqf_level}
                             </div>
-                            <div className="flex-1">
-                              <h3 className="font-semibold text-lg">{edu.institute_name}</h3>
-                              <p className="text-gray-700 dark:text-gray-300">{edu.degree}, {edu.field_of_study}</p>
-                              <p className="text-sm text-gray-500 dark:text-gray-400">
-                                {formatMonthYear(edu.started_at)} - {edu.currently_studying ? 'Present' : formatMonthYear(edu.completed_at)}
-                              </p>
-                              {edu.description && (
-                                <p className="mt-2 text-gray-600 dark:text-gray-300 text-sm whitespace-pre-wrap">
-                                  {edu.description}
-                                </p>
+                            <div className="flex items-center gap-2">
+                              <CalendarDays className="h-4 w-4" />
+                              Passed: {formatDate(cert.passed_at)}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <UserCheck className="h-4 w-4" />
+                              Status:{" "}
+                              {cert.is_verified ? (
+                                <span className="text-green-500 font-semibold">Verified</span>
+                              ) : (
+                                <span className="text-yellow-500 font-semibold">Pending</span>
                               )}
                             </div>
-                          </li>
-                        ))}
-                      </ul>
+                            {cert.blockchain_certificate_hash && (
+                              <div className="flex items-center gap-2 text-xs pt-2">
+                                <LinkIcon className="h-3 w-3" />
+                                <span className="truncate">
+                                  Hash: {cert.blockchain_certificate_hash}
+                                </span>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      ))
                     ) : (
-                      <p className="text-center text-gray-500">
-                        No education added yet.
+                      <p className="text-center text-gray-500 md:col-span-2">
+                        No certificates added yet.
                       </p>
                     )}
                   </CardContent>
                 </Card>
+              </TabsContent>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Sparkles className="h-5 w-5" /> Skills
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {user.skills?.length ? (
-                      <div className="flex flex-wrap gap-2">
-                        {user.skills.map((skill, i) => (
-                          <span
-                            key={i}
-                            className="bg-gray-200 dark:bg-gray-700 px-3 py-1 rounded-full text-sm font-medium text-gray-800 dark:text-gray-200"
-                          >
-                            {skill}
-                          </span>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-center text-gray-500">
-                        No skills added yet.
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-          </Tabs>
+              <TabsContent value="about" className="mt-4">
+                <div className="space-y-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Info className="h-5 w-5" /> About
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {user.about ? (
+                        <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                          {user.about}
+                        </p>
+                      ) : (
+                        <p className="text-center text-gray-500">
+                          No 'About' information provided.
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <GraduationCap className="h-5 w-5" /> Education
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {user.educations?.length ? (
+                        <ul className="space-y-4">
+                          {user.educations.map((edu) => (
+                            <li key={edu._id} className="flex gap-4">
+                              <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                                <GraduationCap className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+                              </div>
+                              <div className="flex-1">
+                                <h3 className="font-semibold text-lg">{edu.institute_name}</h3>
+                                <p className="text-gray-700 dark:text-gray-300">{edu.degree}, {edu.field_of_study}</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                  {formatMonthYear(edu.started_at)} - {edu.currently_studying ? 'Present' : formatMonthYear(edu.completed_at)}
+                                </p>
+                                {edu.description && (
+                                  <p className="mt-2 text-gray-600 dark:text-gray-300 text-sm whitespace-pre-wrap">
+                                    {edu.description}
+                                  </p>
+                                )}
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-center text-gray-500">
+                          No education added yet.
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Sparkles className="h-5 w-5" /> Skills
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {user.skills?.length ? (
+                        <div className="flex flex-wrap gap-2">
+                          {user.skills.map((skill, i) => (
+                            <span
+                              key={i}
+                              className="bg-gray-200 dark:bg-gray-700 px-3 py-1 rounded-full text-sm font-medium text-gray-800 dark:text-gray-200"
+                            >
+                              {skill}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-center text-gray-500">
+                          No skills added yet.
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
+            </Tabs>
+          ) : (
+            <Card className="mt-6 py-20 flex flex-col items-center justify-center text-center">
+              <Lock className="h-12 w-12 text-gray-400 mb-4" />
+              <p className="text-lg font-semibold">This profile is private</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Connect with {user.name} to view their full profile.
+              </p>
+            </Card>
+
+          )}
         </div>
       </div>
     </main>
