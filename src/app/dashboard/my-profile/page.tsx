@@ -11,6 +11,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogT
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Calendar, GraduationCap, MapPin, AtSign, LinkIcon, Award, Plus, Pencil, Briefcase, Mail, LogOut, Loader2, X, Sparkles } from "lucide-react" // Added X and Sparkles
 import { toast } from "sonner"
+import { Switch } from "@/components/ui/switch"
+import { Lock, Unlock } from "lucide-react"
 
 type Education = {
   _id: string
@@ -67,6 +69,7 @@ export default function DashboardProfile() {
   const [isEditing, setIsEditing] = useState(false);
 
   const [originalState, setOriginalState] = useState<any>(null);
+  const [isPublic, setIsPublic] = useState(true);
 
   const [form, setForm] = useState({
     institution: "",
@@ -87,6 +90,7 @@ export default function DashboardProfile() {
       location: profile.location || "",
       website: profile.socials?.website || "",
       skills: profile.skills || [],
+      isPublic: profile.isPublic ?? true,
     });
   };
 
@@ -113,7 +117,8 @@ export default function DashboardProfile() {
           setLocation(profile.location || "")
           setWebsite(profile.socials?.website || "")
           setSkills(profile.skills || [])
-          
+          setIsPublic(profile.isPublic ?? true);
+
           captureOriginalState(profile);
           const mappedEducation = profile.educations.map((edu: IEducationFromDB) => ({
             _id: edu._id,
@@ -147,7 +152,7 @@ export default function DashboardProfile() {
     if (newSkill && !skills.includes(newSkill)) {
       setSkills([...skills, newSkill]);
       setSkillInput("");
-  }
+    }
   };
 
   const handleRemoveSkill = (skillToRemove: string) => {
@@ -170,13 +175,13 @@ export default function DashboardProfile() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ about: bio, headline, location, website, skills }),
+        body: JSON.stringify({ about: bio, headline, location, website, skills, isPublic }),
       })
 
       if (response.ok) {
         toast.success("Profile updated successfully!")
-        setIsEditing(false); 
-        captureOriginalState({ about: bio, headline, location, socials: { website }, skills });
+        setIsEditing(false);
+        captureOriginalState({ about: bio, headline, location, socials: { website }, skills, isPublic });
       } else {
         toast.error("Failed to update profile.")
       }
@@ -266,6 +271,7 @@ export default function DashboardProfile() {
       setLocation(originalState.location);
       setWebsite(originalState.website);
       setSkills(originalState.skills);
+      setIsPublic(originalState.isPublic);
     }
     setIsEditing(!isEditing);
   };
@@ -276,8 +282,8 @@ export default function DashboardProfile() {
       toast.error("Could not find user ID to share.");
       return;
     }
-    const profileUrl = `${window.location.origin}/dashboard/profiles/${user.uuid}`; 
-    
+    const profileUrl = `${window.location.origin}/dashboard/profiles/${user.uuid}`;
+
     navigator.clipboard.writeText(profileUrl)
       .then(() => {
         toast.success("Profile link copied to clipboard!");
@@ -343,6 +349,19 @@ export default function DashboardProfile() {
                       </a>
                     )}
                   </div>
+                  {!isEditing && (
+                    <div
+                      className={`flex items-center gap-1.5 text-xs font-medium pt-1 ${isPublic ? "text-green-600" : "text-red-600"
+                        }`}
+                    >
+                      {isPublic ? (
+                        <Unlock className="h-3 w-3" />
+                      ) : (
+                        <Lock className="h-3 w-3" />
+                      )}
+                      <span>Profile is {isPublic ? "Public" : "Private"}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -370,7 +389,7 @@ export default function DashboardProfile() {
                   </>
                 )}
               </Button>
-              
+
               <Button className="text-sm" onClick={handleShareProfile}>
                 <Briefcase className="h-4 w-4 mr-2" /> Share Profile
               </Button>
@@ -384,7 +403,7 @@ export default function DashboardProfile() {
 
         {/* --- MAIN COLUMN (LEFT) --- */}
         <div className="lg:col-span-2 space-y-4 md:space-y-6">
-          
+
           {/* About */}
           <Card>
             <CardHeader className="pb-3">
@@ -413,6 +432,23 @@ export default function DashboardProfile() {
               {/* Grid for Headline, Location, Website (only in edit mode) */}
               {isEditing && (
                 <div className="grid gap-4 sm:grid-cols-2 pt-4">
+                  <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm sm:col-span-2">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="isPublic" className="text-sm font-medium">
+                        Public Profile
+                      </Label>
+                      <CardDescription className="text-xs">
+                        {isPublic
+                          ? "Your certificates will be visible to others."
+                          : "Only your connections can view your certificates."}
+                      </CardDescription>
+                    </div>
+                    <Switch
+                      id="isPublic"
+                      checked={isPublic}
+                      onCheckedChange={setIsPublic}
+                    />
+                  </div>
                   <div className="space-y-2">
                     <Label htmlFor="headline" className="text-xs md:text-sm">Headline</Label>
                     <Input id="headline" value={headline} onChange={(e) => setHeadline(e.target.value)} className="text-sm" />
@@ -590,7 +626,7 @@ export default function DashboardProfile() {
           </Card>
 
         </div>
-        
+
         <div className="lg:col-span-1 space-y-4 md:space-y-6">
 
           {/* Contact & Links Card */}
@@ -619,11 +655,11 @@ export default function DashboardProfile() {
                 </div>
               )}
               {(!location && !website) && (
-                 <div className="text-xs md:text-sm text-muted-foreground">No contact info added.</div>
+                <div className="text-xs md:text-sm text-muted-foreground">No contact info added.</div>
               )}
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base md:text-lg flex items-center gap-2">

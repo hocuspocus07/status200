@@ -44,7 +44,7 @@ export async function PUT(request: Request) {
     }
 
     const body = await request.json();
-    const { about, headline, location, website,skills } = body;
+    const { about, headline, location, website,skills,isPublic } = body;
 
     await dbConnect();
 
@@ -56,7 +56,8 @@ export async function PUT(request: Request) {
           headline,
           location,
           "socials.website": website,
-          skills
+          skills,
+          isPublic
         },
       },
       { new: true, runValidators: true }
