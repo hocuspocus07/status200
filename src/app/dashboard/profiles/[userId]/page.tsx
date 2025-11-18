@@ -438,10 +438,11 @@ export default function UserProfilePage() {
               <AvatarFallback className="text-4xl">{avatarFallback}</AvatarFallback>
             </Avatar>
 
-            {(isProfilePublic || connectionStatus === "connected") && <div className="flex gap-2">
+            <div className="flex gap-2">
               {renderConnectionButtons()}
-              <Button variant="default" size="sm">Message</Button>
-            </div>}
+              {(isProfilePublic || connectionStatus === "connected") && (
+              <Button variant="default" size="sm">Message</Button>)}
+            </div>
           </div>
 
           <div className="mt-6">
