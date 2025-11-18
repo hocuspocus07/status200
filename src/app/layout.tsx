@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/components/landing/theme-provider"
 import { Suspense } from "react"
 import "./globals.css"
 import { Toaster } from "sonner"
+import Translation from "../components/translation/translations";
 
 export const metadata: Metadata = {
   title: "CredentialHub - Your Complete Micro-Credential Portfolio",
@@ -26,9 +27,13 @@ export default function RootLayout({
         <Suspense fallback={null}>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
             {children}
-            <Toaster/>
+            <Toaster />
           </ThemeProvider>
         </Suspense>
+
+        {/* Add the Translation Widget here */}
+        <Translation />
+
         <Analytics />
       </body>
     </html>
