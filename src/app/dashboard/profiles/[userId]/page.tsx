@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
   Avatar,
@@ -49,6 +50,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 interface Certificate {
+  _id: string; 
   course: string;
   issued_by: string;
   nsqf_level: string;
@@ -98,15 +100,13 @@ export default function UserProfilePage() {
   const [profileUserId, setProfileUserId] = useState<string | null>(null);
   const [myId, setMyId] = useState<string | null>(null);
   const [user, setUser] = useState<UserProfile | null>(null);
-
+  console.log(user?.certificates)
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("idle");
   const [connectionId, setConnectionId] = useState<string | null>(null); // For 'connected' or 'pending-in'
   const [isConnecting, setIsConnecting] = useState(false);
   const [token, setToken] = useState<string | null>(null);
-
   const formatDate = (raw: any) => {
     try {
       return new Date(raw).toLocaleDateString("en-US", {
@@ -514,7 +514,8 @@ export default function UserProfilePage() {
                   <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {user.certificates?.length ? (
                       user.certificates.map((cert, i) => (
-                        <Card key={i} className="overflow-hidden shadow-lg hover:shadow-xl">
+                        <Link href={`/dashboard/certificates/${cert._id}`} key={cert._id}>
+                        <Card className="overflow-hidden shadow-lg hover:shadow-xl">
                           <img
                             src={cert.bucket_image_url}
                             alt={cert.course}
@@ -556,6 +557,7 @@ export default function UserProfilePage() {
                             )}
                           </CardContent>
                         </Card>
+                        </Link>
                       ))
                     ) : (
                       <p className="text-center text-gray-500 md:col-span-2">

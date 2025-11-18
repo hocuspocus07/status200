@@ -238,14 +238,14 @@ export default function MyCertificatesPage() {
   
   if (isLoading) {
     return (
-      <div className="bg-black min-h-screen p-6 text-white flex items-center justify-center">
+      <div className="min-h-screen p-6 text-foreground flex items-center justify-center">
         <p className="text-xl">Loading your certificates...</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-black min-h-screen p-4 sm:p-6 text-white">
+    <div className="min-h-screen p-4 sm:p-6 text-foregorund">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl font-bold mb-6">My Certificates</h1>
         {certificates.length === 0 ? (
