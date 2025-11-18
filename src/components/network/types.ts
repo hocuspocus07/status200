@@ -12,7 +12,8 @@ export type ProfileData = {
     avatar?: string;
   };
   isVerified?: boolean;
-  created_at?:Date,
+  created_at?:Date;
+  isPublic?:boolean;
 };
 
 export interface Certificate {

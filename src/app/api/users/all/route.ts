@@ -13,7 +13,7 @@ export async function GET(request: Request) {
     await dbConnect();
 
     const users = await User.find({ _id: { $ne: loggedInUserId } })
-      .select("name headline location about skills profile isVerified") 
+      .select("name headline location about skills profile isVerified isPublic") 
       .lean();
 
     return NextResponse.json({ users });

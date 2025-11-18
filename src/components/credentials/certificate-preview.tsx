@@ -1,13 +1,13 @@
 "use client";
 
 import * as React from "react";
+import { useState } from "react";
 import {
   CheckCircle,
   XCircle,
-  Download,
-  Share2,
   Database,
   Hash,
+  QrCode,
 } from "lucide-react";
 
 import {
@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/tooltip";
 
 import { ICertificate } from "@/models/certificate";
+import { QrCodeModal } from "./qr-code";
 
 interface CertificatePreviewProps {
   certificate: ICertificate;
@@ -99,6 +100,7 @@ const InfoItem: React.FC<{
 export const CertificatePreview: React.FC<CertificatePreviewProps> = ({
   certificate,
 }) => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const formattedDate = new Date(certificate.passed_at).toLocaleDateString(
     "en-US",
     {
@@ -107,9 +109,9 @@ export const CertificatePreview: React.FC<CertificatePreviewProps> = ({
       day: "numeric",
     }
   );
-
+  console.log(certificate);
   return (
-    <div className="p-4 md:p-8">
+    <div className="p-4">
       <Card className="max-w-6xl mx-auto shadow-none border-0 overflow-hidden rounded-2xl">
         <div className="grid grid-cols-1 lg:grid-cols-3">
           <div className="lg:col-span-2 p-0 md:p-10 bg-muted/30 flex items-center justify-center">
@@ -180,19 +182,20 @@ export const CertificatePreview: React.FC<CertificatePreviewProps> = ({
 
             <Separator className="my-6" />
 
-            <CardFooter className="p-0 mt-8 flex gap-3">
-              <Button className="w-full" size="lg">
-                <Download className="w-4 h-4 mr-2" />
-                Download
-              </Button>
-              <Button variant="outline" className="w-full" size="lg">
-                <Share2 className="w-4 h-4 mr-2" />
-                Share
+            <CardFooter className="p-0">
+              <Button className="w-full" size="lg" onClick={() => setIsModalOpen(true)}>
+                <QrCode className="w-4 h-4 mr-2" />
+                Get QR Code
               </Button>
             </CardFooter>
           </div>
         </div>
       </Card>
+      <QrCodeModal
+        url={`http://localhost:3000/dashboard/certificates/${certificate._id}`}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+      />
     </div>
   );
 };
