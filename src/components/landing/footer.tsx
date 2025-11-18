@@ -8,7 +8,7 @@ export function Footer() {
           <div className="md:col-span-2">
             <div className="flex items-center space-x-2 mb-4">
               <GraduationCap className="h-8 w-8 text-primary" />
-              <span className="font-bold text-xl">CredentialHub</span>
+              <span className="font-bold text-xl">Certi-fi</span>
             </div>
             <p className="text-muted-foreground mb-6 max-w-md">
               The comprehensive platform for aggregating, validating, and showcasing your micro-credentials. Powered by
@@ -75,7 +75,7 @@ export function Footer() {
         </div>
 
         <div className="border-t border-border mt-8 pt-8 text-center text-muted-foreground">
-          <p>&copy; 2025 CredentialHub. All rights reserved. Built with NCVET compliance.</p>
+          <p>&copy; 2025 Certi-fi. All rights reserved. Built with NCVET compliance.</p>
         </div>
       </div>
     </footer>

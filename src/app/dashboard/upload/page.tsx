@@ -17,7 +17,7 @@ type VerifyValues = {
   issued_to: string;
   issued_by: string;
   passed_at: string;
-  verification_link: string;
+  verification_link?: string;
   nsqf_level?: string;
   syllabus: string;
   outcomes: string;
@@ -96,10 +96,9 @@ export default function VerifyPage() {
     if (!values.issued_to) { toast.error("Issued To field is required"); return; }
     if (!values.issued_by) { toast.error("Issued By field is required"); return; }
     if (!values.passed_at) { toast.error("Date of passing is required"); return; }
-    if (!values.verification_link) { toast.error("Verification link is required"); return; }
     if (!values.syllabus) { toast.error("Syllabus is required"); return; }
     if (!values.outcomes) { toast.error("Course outcomes are required"); return; }
-    if (!values.jobs) { toast.error("Job opportunities are required"); return; }
+    if (!values.jobs) { toast.error("Job roles you are looking for are required"); return; }
     if (!file) { toast.error("Please upload your image certificate."); return; }
 
     setSubmitting(true);
@@ -116,7 +115,7 @@ export default function VerifyPage() {
       formData.append("issued_to", values.issued_to);
       formData.append("issued_by", values.issued_by);
       formData.append("passed_at", values.passed_at);
-      formData.append("verification_link", values.verification_link);
+      formData.append("verification_link", values.verification_link as string);
       
       // --- ADDED: Data for ML Model 2 (Text Analysis) ---
       formData.append("syllabus", values.syllabus);
@@ -235,7 +234,7 @@ export default function VerifyPage() {
                   </div>
                   <FormField control={form.control} name="verification_link" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Verification Link*</FormLabel>
+                      <FormLabel>Verification Link</FormLabel>
                       <FormControl><Input placeholder="https://www.credly.com/your-badge-link" {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
@@ -274,8 +273,8 @@ export default function VerifyPage() {
                   )} />
                   <FormField control={form.control} name="jobs" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Job opportunities*</FormLabel>
-                      <FormControl><Textarea rows={4} placeholder="Describe the roles this prepares you for..." {...field} /></FormControl>
+                      <FormLabel>Job Roles you are looking for*</FormLabel>
+                      <FormControl><Textarea rows={4} placeholder="Describe the role(s) this prepares you for..." {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )} />

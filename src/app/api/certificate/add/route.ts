@@ -12,6 +12,9 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+const FORGERY_MODEL_URL = process.env.NEXT_PUBLIC_FORGERY_MODEL || "http://localhost:5000";
+const NSQF_MODEL_URL = process.env.NEXT_PUBLIC_NSQF_MODEL || "http://localhost:8000";
+
 const uploadToCloudinary = (file: File): Promise<{ secure_url: string, public_id: string }> => {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
@@ -60,18 +63,16 @@ export async function POST(req: NextRequest) {
     const syllabus = formData.get("syllabus") as string;
     const outcomes = formData.get("outcomes") as string;
     const jobs = formData.get("jobs") as string;
-    
+
     // ✅ ADDED: Retrieve optional fields for the second ML model
     const duration = formData.get("duration") as string | null;
     const credits = formData.get("credits") as string | null;
     const projects = formData.get("projects") as string | null;
 
-    if (!certificateFile || !course || !issued_to || !issued_by || !passed_at_string || !verification_link || !syllabus || !outcomes || !jobs) {
+    if (!certificateFile || !course || !issued_to || !issued_by || !passed_at_string || !syllabus || !outcomes || !jobs) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
     const passed_at = new Date(passed_at_string);
-    const shammonUrl: string = process.env.NEXT_PUBLIC_SHAMMON_MODEL as string;
-    const adnanUrl: string = process.env.NEXT_PUBLIC_ADNAN_MODEL as string;
 
     // ✅ CORRECTED: Create a specific FormData for the image model
     const imageFormData = new FormData();
@@ -86,13 +87,13 @@ export async function POST(req: NextRequest) {
       uploadToCloudinary(certificateFile),
       
       // ML Model 1 (port 5000): Image verification
-      fetch(adnanUrl, {
+      fetch(`${FORGERY_MODEL_URL}/analyze-forgery`, {
         method: "POST",
         body: imageFormData, // Send only the relevant data
       }).then(res => res.json()),
 
       // ✅ CORRECTED: Completed the JSON body for the text analysis model
-      fetch(shammonUrl, { 
+      fetch(`${NSQF_MODEL_URL}/predict`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -123,6 +124,7 @@ export async function POST(req: NextRequest) {
       tags:analysisResult.tags,
       keywords: analysisResult.keywords,
       reasons_for_failure: verificationResult.analysis.decision.reasons || [],
+
     };
     // console.log("model analysis result:", analysisResult);
 
@@ -131,36 +133,36 @@ export async function POST(req: NextRequest) {
     // 4. Save the initial certificate data to the user
     user.certificates.push(newCertificateData);
     await user.save();
-    
+
     let message = "Certificate submitted and processing complete.";
     const addedCertificate = user.certificates[user.certificates.length - 1];
 
     // 5. Conditionally add to blockchain ONLY if verified
     if (newCertificateData.is_verified) {
-        console.log("Certificate is verified, proceeding to add to blockchain.");
-        const blockchainResult = await addCertificateToBlockchain({
-            learnerIdHash: user.learnerIdHash,
-            certUrl: uploadResult.secure_url,
-            courseName: course,
-            issuingBody: issued_by,
-            issuedOn: Math.floor(passed_at.getTime() / 1000),
-        });
+      console.log("Certificate is verified, proceeding to add to blockchain.");
+      const blockchainResult = await addCertificateToBlockchain({
+        learnerIdHash: user.learnerIdHash,
+        certUrl: uploadResult.secure_url,
+        courseName: course,
+        issuingBody: issued_by,
+        issuedOn: Math.floor(passed_at.getTime() / 1000),
+      });
 
-        if (blockchainResult.success) {
-            addedCertificate.blockchain_certificate_hash = blockchainResult.certHash;
-            addedCertificate.transaction_hash = blockchainResult.txHash;
-            await user.save();
-            message = "Certificate successfully verified and added to blockchain.";
-            console.log("Successfully added to blockchain with txHash:", blockchainResult.txHash);
-        } else {
-            console.error("Blockchain addition failed:", blockchainResult.error);
-            addedCertificate.reasons_for_failure?.push("Blockchain registration failed.");
-            await user.save();
-            message = "Certificate verified, but failed to register on blockchain.";
-        }
+      if (blockchainResult.success) {
+        addedCertificate.blockchain_certificate_hash = blockchainResult.certHash;
+        addedCertificate.transaction_hash = blockchainResult.txHash;
+        await user.save();
+        message = "Certificate successfully verified and added to blockchain.";
+        console.log("Successfully added to blockchain with txHash:", blockchainResult.txHash);
+      } else {
+        console.error("Blockchain addition failed:", blockchainResult.error);
+        addedCertificate.reasons_for_failure?.push("Blockchain registration failed.");
+        await user.save();
+        message = "Certificate verified, but failed to register on blockchain.";
+      }
     } else {
-        console.log("Certificate is not verified, skipping blockchain step.");
-        message = "Certificate processed, but did not pass automatic verification.";
+      console.log("Certificate is not verified, skipping blockchain step.");
+      message = "Certificate processed, but did not pass automatic verification.";
     }
 
     // 6. Return a final success response

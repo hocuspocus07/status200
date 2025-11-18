@@ -6,7 +6,7 @@ export interface ICertificate extends Document {
   course: string;
   passed_at: Date;
   is_verified: boolean;
-  verification_link: string;
+  verification_link?: string;
   bucket_image_url?: string;
   nsqf_level?: number;
   blockchain_certificate_hash?: string;
@@ -24,7 +24,7 @@ export const CertificateSchema = new Schema<ICertificate>({
   passed_at: { type: Date, required: true },
   bucket_image_url: { type: String },
   is_verified: { type: Boolean, default: false },
-  verification_link: { type: String, required: true },
+  verification_link: { type: String, required: false },
   reasons_for_failure: { type: [String], default: [] },
   blockchain_certificate_hash: { type: String },
   transaction_hash: { type: String },

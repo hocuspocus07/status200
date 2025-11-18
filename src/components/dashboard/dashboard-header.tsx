@@ -1,13 +1,42 @@
 "use client"
-
+import { useEffect, useState} from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ThemeToggle } from "@/components/theme-toggle"
-import { Bell, Search, Plus } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
+import { Search, Plus } from "lucide-react"
 import Link from "next/link"
+import { IncomingRequestsDialog } from "./requests-dialog"
 
 export function DashboardHeader() {
+ const [token, setToken] = useState<string | null>(null);
+  const [pendingCount, setPendingCount] = useState(0);
+
+  useEffect(() => {
+    const storedToken = localStorage.getItem("token");
+    setToken(storedToken);
+  }, []);
+
+  useEffect(() => {
+    if (!token) return;
+
+    const fetchPendingCount = async () => {
+      try {
+        const res = await fetch("/api/connections/pending", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) {
+          console.error("Failed to fetch pending count");
+          return;
+        }
+        const data = await res.json();
+        setPendingCount(data.requests.length);
+      } catch (err: any) {
+        console.error(err.message);
+      }
+    };
+
+    fetchPendingCount();
+  }, [token]);
   return (
     <header className="h-16 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-full items-center justify-between px-4 md:px-6 gap-2 md:gap-4">
@@ -28,12 +57,11 @@ export function DashboardHeader() {
           </Link>
           </Button>
 
-          {/* Notifications */}
-          <Button variant="ghost" size="sm" className="relative">
-            <Bell className="h-5 w-5" />
-            <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 text-xs">3</Badge>
-          </Button>
-
+          <IncomingRequestsDialog
+            token={token}
+            pendingCount={pendingCount}
+            onRequestsUpdated={setPendingCount}
+          />
           <ThemeToggle />
         </div>
       </div>

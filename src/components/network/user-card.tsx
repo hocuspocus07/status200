@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link" // Import Link for navigation
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -8,11 +9,9 @@ import { ProfileData } from "./types";
 
 export function UserCard({
   user,
-  onOpenProfile,
   onMessage,
 }: {
   user: ProfileData
-  onOpenProfile: () => void
   onMessage: () => void
 }) {
   const initials = user.name.split(" ").map((n) => n[0]).slice(0, 2).join("")
@@ -42,7 +41,12 @@ export function UserCard({
         </div>
         <p className="text-sm text-muted-foreground line-clamp-3">{user.about || "No bio provided."}</p>
         <div className="flex items-center justify-between">
-          <Button variant="outline" onClick={onOpenProfile}>View Profile</Button>
+          <div className="flex items-center gap-2">
+            <Button variant="secondary" asChild>
+              <Link href={`/dashboard/profiles/${user._id}`}>View Profile</Link>
+            </Button>
+          </div>
+          
           <Button onClick={onMessage}>Message</Button>
         </div>
       </CardContent>

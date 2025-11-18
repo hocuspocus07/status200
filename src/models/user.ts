@@ -11,6 +11,7 @@ export interface IUser extends Document {
   headline?:string,
   uuid: string;          
   learnerIdHash: string;
+  isPublic:boolean;
   skills?: string[];
   profile?: {
     avatar?: string;
@@ -38,6 +39,7 @@ const UserSchema = new Schema<IUser>(
     password_hash: { type: String, required: true },
     uuid: { type: String, required: true, unique: true },          
     learnerIdHash: { type: String, required: true, unique: true }, 
+    isPublic:{type:Boolean,default:true},
     profile: {
       avatar: String,
       username: String,
