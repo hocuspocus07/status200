@@ -10,10 +10,9 @@ import { Toaster } from "sonner"
 import Translation from "../components/translation/translations";
 
 export const metadata: Metadata = {
-  title: "CredentialHub - Your Complete Micro-Credential Portfolio",
+  title: "Certi-fi - Your Complete Micro-Credential Portfolio",
   description:
     "Aggregate, validate, and showcase all your micro-credentials in one unified platform. Build a comprehensive skill profile that employers trust.",
-  generator: "v0.app",
 }
 
 export default function RootLayout({
