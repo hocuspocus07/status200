@@ -7,11 +7,12 @@ export interface IUser extends Document {
   email: string;
   password_hash: string;
   about?: string;
-  location?:string,
-  headline?:string,
-  uuid: string;          
+  location?: string;
+  headline?: string;
+  uuid: string;
   learnerIdHash: string;
-  isPublic:boolean;
+  isPublic: boolean;
+  isEmployee?: boolean;   // ← NEW FIELD
   skills?: string[];
   profile?: {
     avatar?: string;
@@ -21,7 +22,7 @@ export interface IUser extends Document {
     linkedin?: string;
     github?: string;
     x?: string;
-    website?:string,
+    website?: string;
   };
   educations?: IEducation[];
   certificates?: ICertificate[];
@@ -37,9 +38,13 @@ const UserSchema = new Schema<IUser>(
     location: { type: String },
     headline: { type: String },
     password_hash: { type: String, required: true },
-    uuid: { type: String, required: true, unique: true },          
-    learnerIdHash: { type: String, required: true, unique: true }, 
-    isPublic:{type:Boolean,default:true},
+    uuid: { type: String, required: true, unique: true },
+    learnerIdHash: { type: String, required: true, unique: true },
+    isPublic: { type: Boolean, default: true },
+
+    // ✅ NEW: Employee flag
+    isEmployee: { type: Boolean, default: false },
+
     profile: {
       avatar: String,
       username: String,
@@ -57,4 +62,5 @@ const UserSchema = new Schema<IUser>(
   { timestamps: { createdAt: "created_at", updatedAt: "updated_at" } }
 );
 
-export default mongoose.models.User || mongoose.model<IUser>("User", UserSchema);
+export default mongoose.models.User ||
+  mongoose.model<IUser>("User", UserSchema);

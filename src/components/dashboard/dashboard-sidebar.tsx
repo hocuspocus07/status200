@@ -13,6 +13,7 @@ import {
   Award,
   Users,
   FileText,
+  Briefcase,
   ChevronLeft,
   ChevronRight,
   Menu,
@@ -20,19 +21,26 @@ import {
   MessageCircleMore,
 } from "lucide-react"
 
-const navigation = [
+const learnerNavigation = [
   { name: "Dashboard", href: "/dashboard", icon: Home },
-  { name: "My Credentials", href: "/dashboard/my-credentials", icon: Award, count: 12 },
+  { name: "My Credentials", href: "/dashboard/my-credentials", icon: Award },
   { name: "Upload a certificate", href: "/dashboard/upload", icon: FileText },
+  { name: "Jobs", href: "/dashboard/jobs", icon: Briefcase },
   { name: "Network", href: "/dashboard/network", icon: Users },
-  { name: "Messages", href: "/dashboard/inbox", icon: MessageCircleMore, count: 4 },
+  { name: "Messages", href: "/dashboard/inbox", icon: MessageCircleMore },
+]
+
+const employerNavigation = [
+  { name: "Network", href: "/dashboard/network", icon: Users },
+  { name: "Messages", href: "/dashboard/inbox", icon: MessageCircleMore },
+  { name: "Jobs Posted", href: "/dashboard/jobs-posted", icon: FileText },
 ]
 
 export function DashboardSidebar() {
   const [collapsed, setCollapsed] = useState(false)
-  const [profileOpen, setProfileOpen] = useState(false)
   const pathname = usePathname()
-  const [user, setUser] = useState<{ name: string; email: string } | null>(null)
+  const [user, setUser] = useState<{ name: string; email: string; isEmployee?: boolean } | null>(null)
+  const [loadingUser, setLoadingUser] = useState(true)
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -61,11 +69,16 @@ export function DashboardSidebar() {
         console.error('Failed to fetch user:', error)
         localStorage.removeItem("token")
         window.location.href = "/login"
+      } finally {
+        setLoadingUser(false)
       }
     }
 
     fetchUser()
   }, [])
+
+  const navItems = user?.isEmployee ? employerNavigation : learnerNavigation
+
   const SidebarContent = () => (
     <div className="flex h-full flex-col">
       {/* Header */}
@@ -90,7 +103,7 @@ export function DashboardSidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 space-y-1 p-4">
-        {navigation.map((item) => {
+        {navItems.map((item) => {
           const active = pathname === item.href
           return (
             <Link
