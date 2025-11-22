@@ -70,6 +70,8 @@ export default function DashboardProfile() {
 
   const [originalState, setOriginalState] = useState<any>(null);
   const [isPublic, setIsPublic] = useState(true);
+  const [isEmployee, setIsEmployee] = useState(false);
+
 
   const [form, setForm] = useState({
     institution: "",
@@ -118,6 +120,8 @@ export default function DashboardProfile() {
           setWebsite(profile.socials?.website || "")
           setSkills(profile.skills || [])
           setIsPublic(profile.isPublic ?? true);
+          setIsEmployee(profile.isEmployee ?? false);
+
 
           captureOriginalState(profile);
           const mappedEducation = profile.educations.map((edu: IEducationFromDB) => ({
@@ -327,7 +331,17 @@ export default function DashboardProfile() {
                   <AvatarFallback>{initials}</AvatarFallback>
                 </Avatar>
                 <div className="space-y-1 flex-1 min-w-0">
-                  <h2 className="text-lg md:text-xl font-bold text-foreground">{user?.name}</h2>
+                  <h2 className="text-lg md:text-xl font-bold text-foreground">{user?.name} {isEmployee && (
+  <span
+    className="px-4 text-[10px] md:text-xs 
+               text-yellow-400 bg-neutral-900 
+               border border-yellow-400 
+               rounded-md shadow-sm"
+  >
+    Employee
+  </span>
+)}</h2>
+                  
                   <p className="text-sm text-muted-foreground line-clamp-1">{headline}</p>
                   <div className="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center gap-2 sm:gap-3 text-xs md:text-sm text-muted-foreground">
                     {location && (

@@ -29,8 +29,9 @@ export async function GET(req: NextRequest) {
         email: user.email,
         learnerIdHash: user.learnerIdHash,
         profile: user.profile,
-        socials: user.socials
-      }
+        socials: user.socials,
+        isEmployee: user.isEmployee ?? false,
+      },
     });
 
   } catch (error: unknown) {

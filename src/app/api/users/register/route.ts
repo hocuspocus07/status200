@@ -14,15 +14,21 @@ export async function POST(req: NextRequest) {
     await dbConnect();
 
     const body = await req.json();
-    const { name, email, password } = body;
+    const { name, email, password, isEmployee } = body;
 
     if (!name || !email || !password) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Missing required fields" },
+        { status: 400 }
+      );
     }
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return NextResponse.json({ error: "User already exists" }, { status: 409 });
+      return NextResponse.json(
+        { error: "User already exists" },
+        { status: 409 }
+      );
     }
 
     // Hash password
@@ -36,27 +42,43 @@ export async function POST(req: NextRequest) {
     console.log("Generated learnerId (UUID):", uuid);
     console.log("Computed learnerId (keccak256):", learnerIdHash);
 
+    // Create user in MongoDB INCLUDING employee flag
     const user = await User.create({
       name,
       email,
       password_hash,
       uuid: uuid,
-      learnerIdHash: learnerIdHash
+      learnerIdHash: learnerIdHash,
+      isEmployee: Boolean(isEmployee) // <- STORE IT
     });
-    const token = jwt.sign({ id: user._id, email: user.email, learnerIdHash: user.learnerIdHash }, JWT_SECRET, { expiresIn: "7d" });
 
-    return NextResponse.json({
-      message: "User registered successfully",
-      token,
-      user: {
+    // Include isEmployee in JWT
+    const token = jwt.sign(
+      {
         id: user._id,
-        name: user.name,
         email: user.email,
-        uuid: user.uuid,
         learnerIdHash: user.learnerIdHash,
+        isEmployee: user.isEmployee
+      },
+      JWT_SECRET,
+      { expiresIn: "7d" }
+    );
 
-      }
-    }, { status: 201 });
+    return NextResponse.json(
+      {
+        message: "User registered successfully",
+        token,
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          uuid: user.uuid,
+          learnerIdHash: user.learnerIdHash,
+          isEmployee: user.isEmployee
+        }
+      },
+      { status: 201 }
+    );
 
   } catch (error: unknown) {
     if (error instanceof Error) {

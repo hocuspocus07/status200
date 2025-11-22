@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     }
 
     const token = jwt.sign(
-      { id: foundUser._id, email: foundUser.email, learnerIdHash: foundUser.learnerIdHash },
+      { id: foundUser._id, email: foundUser.email, learnerIdHash: foundUser.learnerIdHash, isEmployee: foundUser.isEmployee,},
       JWT_SECRET, // Use the validated constant
       { expiresIn: "7d" }
     );
