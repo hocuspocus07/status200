@@ -10,6 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { toast } from "sonner";
 import { UploadDropzone } from "@/components/credentials/upload-drop";
 import { VerificationResult, VerificationResultDialog } from "@/components/credentials/verify-credential";
+import DigilockerPopup from "@/components/digilocker/DigilockerPopup";
 
 // --- INTERFACES AND TYPES ---
 type VerifyValues = {
@@ -42,6 +43,7 @@ export default function VerifyPage() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [isResultModalOpen, setIsResultModalOpen] = React.useState(false);
   const [verificationResult, setVerificationResult] = React.useState<VerificationResult | null>(null);
+  const [digilockerOpen, setDigilockerOpen] = React.useState(false);
 
   const form = useForm<VerifyValues>({
     defaultValues: {
@@ -166,7 +168,7 @@ export default function VerifyPage() {
         result={verificationResult}
       />
       <main className="container mx-auto px-4 py-8">
-        <div className="mb-8 flex items-center justify-between">
+        <div className="mb-4 flex items-center justify-between">
           <div>
             <h1 className="text-balance text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
               Verify a Certificate
@@ -179,6 +181,9 @@ export default function VerifyPage() {
             <a href="/credentials">My Credentials</a>
           </Button>
         </div>
+        <Button className="mb-4" variant="outline" onClick={()=>setDigilockerOpen(true)}>
+          Add using Digilocker
+        </Button>
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           <Card className="md:col-span-2 transition-all hover:shadow-sm">
@@ -336,6 +341,13 @@ export default function VerifyPage() {
           </div>
         </div>
       </main>
+      <DigilockerPopup
+        open={digilockerOpen}
+        onOpenChange={setDigilockerOpen}
+        onCertificateSelect={(cert)=>{
+          console.log(cert);
+        }}
+      />
     </>
   );
 }
