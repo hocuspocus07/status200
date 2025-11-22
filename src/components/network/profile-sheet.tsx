@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator"
 import { ProfileData } from "./types";
 import type { Certificate } from "./types";
 import { useEffect, useState } from "react"
-import { ExternalLink } from "lucide-react" 
+import { ExternalLink } from "lucide-react"
 
 export function ProfileSheet({
   user,
@@ -44,7 +44,7 @@ export function ProfileSheet({
       fetchCertificates();
     }
     return () => {
-        setCertificates([]);
+      setCertificates([]);
     }
   }, [user]);
 

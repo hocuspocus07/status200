@@ -44,6 +44,7 @@ export default function VerifyPage() {
   const [isResultModalOpen, setIsResultModalOpen] = React.useState(false);
   const [verificationResult, setVerificationResult] = React.useState<VerificationResult | null>(null);
   const [digilockerOpen, setDigilockerOpen] = React.useState(false);
+  const [certifMedium, setCertifMedium] = React.useState<"upload" | "digilocker">("upload");
 
   const form = useForm<VerifyValues>({
     defaultValues: {
@@ -66,8 +67,8 @@ export default function VerifyPage() {
   const fetchCertificates = async () => {
     try {
       setIsLoading(true);
-      const token = localStorage.getItem("token"); // ⚠️ Replace with your actual key
-      if (!token) return; // Silently fail if not logged in
+      const token = localStorage.getItem("token");
+      if (!token) return;
 
       const response = await fetch('/api/certificate/get', {
         headers: { 'Authorization': `Bearer ${token}` },
@@ -94,6 +95,7 @@ export default function VerifyPage() {
 
   // ✅ UPDATED: onSubmit now sends all required fields for both ML models
   const onSubmit = async (values: VerifyValues) => {
+    console.log("[debug]: current certifMedium:", certifMedium);
     if (!values.name) { toast.error("Course/Certificate name is required"); return; }
     if (!values.issued_to) { toast.error("Issued To field is required"); return; }
     if (!values.issued_by) { toast.error("Issued By field is required"); return; }
@@ -118,17 +120,19 @@ export default function VerifyPage() {
       formData.append("issued_by", values.issued_by);
       formData.append("passed_at", values.passed_at);
       formData.append("verification_link", values.verification_link as string);
-      
+
       // --- ADDED: Data for ML Model 2 (Text Analysis) ---
       formData.append("syllabus", values.syllabus);
       formData.append("outcomes", values.outcomes);
       formData.append("jobs", values.jobs);
-      
+
       // Append optional fields only if they have a value
       if (values.duration) formData.append("duration", values.duration);
       if (values.credits) formData.append("credits", values.credits.toString());
       if (values.projects) formData.append("projects", values.projects);
 
+      // setting up the certif_medium
+      formData.append("certif_medium", certifMedium);
 
       const response = await fetch("/api/certificate/add", {
         method: "POST",
@@ -181,7 +185,7 @@ export default function VerifyPage() {
             <a href="/credentials">My Credentials</a>
           </Button>
         </div>
-        <Button className="mb-4" variant="outline" onClick={()=>setDigilockerOpen(true)}>
+        <Button className="mb-4" variant="outline" onClick={() => setDigilockerOpen(true)}>
           Add using Digilocker
         </Button>
 
@@ -196,7 +200,13 @@ export default function VerifyPage() {
             <CardContent>
               <Form {...form}>
                 <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
-                  <UploadDropzone value={file} onChange={setFile} />
+                  <UploadDropzone
+                    value={file}
+                    onChange={(f) => {
+                      setFile(f);
+                      if (f) setCertifMedium("upload");
+                    }}
+                  />
 
                   <FormField control={form.control} name="name" render={({ field }) => (
                     <FormItem>
@@ -306,10 +316,10 @@ export default function VerifyPage() {
               <CardDescription className="text-muted-foreground">Tips for submission</CardDescription>
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground space-y-3">
-              <p>- Ensure your uploaded file is a valid PDF.</p>
-              <p>- Fill in all required fields accurately.</p>
-              <p>- The verification link should be publicly accessible.</p>
-              <p>- You can review verified items in <a className="underline underline-offset-4" href="/credentials">My Credentials</a>.</p>
+              <li>Ensure your uploaded file is a valid PDF.</li>
+              <li>Fill in all required fields accurately.</li>
+              <li>The verification link should be publicly accessible.</li>
+              <li>You can review verified items in <a className="underline underline-offset-4" href="/credentials">My Credentials</a>.</li>
             </CardContent>
           </Card>
         </div>
@@ -344,8 +354,45 @@ export default function VerifyPage() {
       <DigilockerPopup
         open={digilockerOpen}
         onOpenChange={setDigilockerOpen}
-        onCertificateSelect={(cert)=>{
-          console.log(cert);
+        onCertificateSelect={(cert) => {
+          console.log("[debug]: certificate loaded from digilocker");
+          if (cert?.file) {
+            try {
+              // Convert Base64 Data URI to File object
+              const arr = cert.file.split(',');
+              const mime = arr[0].match(/:(.*?);/)?.[1] || cert.contentType || 'image/png';
+              const bstr = atob(arr[1]);
+              let n = bstr.length;
+              const u8arr = new Uint8Array(n);
+
+              while (n--) {
+                u8arr[n] = bstr.charCodeAt(n);
+              }
+
+              const extension = mime.split('/')[1] || 'png';
+              const filename = `${cert.name || 'digilocker-certificate'}.${extension}`;
+              const fileObj = new File([u8arr], filename, { type: mime });
+
+              // DEBUG: Visualize the constructed file in a new tab
+              // const debugUrl = URL.createObjectURL(fileObj);
+              // console.log("Debug File URL:", debugUrl);
+              // window.open(debugUrl, "_blank");
+              // DEBUG: Visualize the constructed file in a new tab
+
+              setFile(fileObj);
+
+              // Optional: Pre-fill the name if available
+              if (cert.name) {
+                form.setValue("issued_to", cert.name);
+              }
+
+              toast.success("Certificate loaded from Digilocker");
+              setCertifMedium("digilocker");
+            } catch (error) {
+              console.error("Error converting Digilocker file:", error);
+              toast.error("Failed to process Digilocker certificate");
+            }
+          }
         }}
       />
     </>

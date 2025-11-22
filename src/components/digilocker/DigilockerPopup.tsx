@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,23 +32,29 @@ type Props = {
 };
 
 export default function DigilockerPopup({ open, onOpenChange, onCertificateSelect }: Props) {
-
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
-  const [step, setStep] = useState<"email" | "otp" | "list">("email");
+  const [step, setStep] = useState<"email" | "otp" | "list" | "error">("email");
   const [token, setToken] = useState("");
   const [certificates, setCertificates] = useState<DigiCertificate[]>([]);
+  const [error, setError] = useState("Default error");
+
+  useEffect(() => {
+    const token = localStorage.getItem("digilocker_token");
+    if (token != null)
+      fetchCertificates(token);
+  }, []);
 
   const sendOtp = async () => {
     const res = await fetch(`http://localhost:5500/auth/send-otp`, {
-      method:"POST",
-      headers: { "Content-Type":"application/json" },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email })
     });
 
     const data = await res.json();
 
-    if(!data.success){
+    if (!data.success) {
       toast.error(data.message);
       return;
     }
@@ -59,14 +65,14 @@ export default function DigilockerPopup({ open, onOpenChange, onCertificateSelec
 
   const verifyOtp = async () => {
     const res = await fetch(`http://localhost:5500/auth/verify-otp`, {
-      method:"POST",
-      headers: { "Content-Type":"application/json" },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, otp })
     });
 
     const data = await res.json();
 
-    if(!data.success){
+    if (!data.success) {
       toast.error("OTP Invalid");
       return;
     }
@@ -84,19 +90,24 @@ export default function DigilockerPopup({ open, onOpenChange, onCertificateSelec
     });
 
     const data = await res.json();
+    const allCerts = data.certificates;
 
-    setCertificates(data.certificates || []);
-    setStep("list");
+    if (allCerts.length !== 0) {
+      setCertificates(data.certificates);
+      setStep("list");
+    } else {
+      setStep("email");
+      setError("No Certificate found! Try again");
+    }
   };
 
   const select = async (certId: string) => {
-
+    const token = localStorage.getItem("digilocker_token");
     const res = await fetch(`http://localhost:5500/certificates/${certId}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
 
     const cert: DigiCertificateDetails = await res.json();
-
     onCertificateSelect(cert);
 
     toast.success("Certificate loaded!");
@@ -106,21 +117,46 @@ export default function DigilockerPopup({ open, onOpenChange, onCertificateSelec
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-full max-w-md">
-        <DialogHeader><DialogTitle>Import from Digilocker</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle>
+            {error === ""
+              ? "Import from Digilocker"
+              : error
+            }
+          </DialogTitle>
+        </DialogHeader>
 
         {/* STEP 1 */}
         {step === "email" && (
           <>
-            <Input placeholder="Enter Email" value={email} onChange={e=>setEmail(e.target.value)} />
-            <Button className="w-full mt-3" onClick={sendOtp}>Send OTP</Button>
+            <Input
+              placeholder="Enter Email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+            />
+            <Button
+              className="w-full mt-3"
+              onClick={sendOtp}
+            >
+              Send OTP
+            </Button>
           </>
         )}
 
         {/* STEP 2 */}
         {step === "otp" && (
           <>
-            <Input placeholder="Enter OTP" value={otp} onChange={e=>setOtp(e.target.value)} />
-            <Button className="w-full mt-3" onClick={verifyOtp}>Verify OTP</Button>
+            <Input
+              placeholder="Enter OTP"
+              value={otp}
+              onChange={e => setOtp(e.target.value)}
+            />
+            <Button
+              className="w-full mt-3"
+              onClick={verifyOtp}
+            >
+              Verify OTP
+            </Button>
           </>
         )}
 
@@ -133,7 +169,7 @@ export default function DigilockerPopup({ open, onOpenChange, onCertificateSelec
                   <p className="font-medium">{c.type}</p>
                   <p className="text-xs">{c.name}</p>
                 </div>
-                <Button size="sm" onClick={()=>select(c.certificateId)}>Import</Button>
+                <Button size="sm" onClick={() => select(c.certificateId)}>Import</Button>
               </div>
             ))}
           </div>

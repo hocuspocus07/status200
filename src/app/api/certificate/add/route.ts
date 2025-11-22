@@ -53,6 +53,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
+    console.log("[debug]: req: ", req);
     const formData = await req.formData();
     const certificateFile = formData.get("certificate") as File | null;
     const course = formData.get("course") as string;
@@ -69,7 +70,11 @@ export async function POST(req: NextRequest) {
     const credits = formData.get("credits") as string | null;
     const projects = formData.get("projects") as string | null;
 
-    if (!certificateFile || !course || !issued_to || !issued_by || !passed_at_string || !syllabus || !outcomes || !jobs) {
+    // how the form was uploaded
+    const certif_medium = formData.get("certif_medium") as "upload" | "digilocker" | null;
+    console.log("[debug]: Certificate upload medium:", certif_medium);
+
+    if (!certificateFile || !course || !issued_to || !issued_by || !passed_at_string || !syllabus || !outcomes || !jobs || !certif_medium) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
     const passed_at = new Date(passed_at_string);
@@ -85,12 +90,15 @@ export async function POST(req: NextRequest) {
       analysisResult
     ] = await Promise.all([
       uploadToCloudinary(certificateFile),
-      
+
       // ML Model 1 (port 5000): Image verification
-      fetch(`${FORGERY_MODEL_URL}/analyze-forgery`, {
-        method: "POST",
-        body: imageFormData, // Send only the relevant data
-      }).then(res => res.json()),
+      certif_medium === "upload"
+        ? fetch(`${FORGERY_MODEL_URL}/analyze-forgery`, {
+          method: "POST",
+          body: imageFormData, // Send only the relevant data
+        }).then(res => res.json())
+        : Promise.resolve({ analysis: { decision: { is_suspicious: false } } }),
+      // If from digilocker, skip image model and assume not suspicious
 
       // ✅ CORRECTED: Completed the JSON body for the text analysis model
       fetch(`${NSQF_MODEL_URL}/predict`, {
@@ -121,7 +129,7 @@ export async function POST(req: NextRequest) {
       is_verified: !verificationResult.analysis.decision.is_suspicious,
       nsqf_level: analysisResult.nsqf_level,
       confidence: analysisResult.confidence,
-      tags:analysisResult.tags,
+      tags: analysisResult.tags,
       keywords: analysisResult.keywords,
       reasons_for_failure: verificationResult.analysis.decision.reasons || [],
 
