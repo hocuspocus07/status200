@@ -12,6 +12,8 @@ import { UploadDropzone } from "@/components/credentials/upload-drop";
 import { VerificationResult, VerificationResultDialog } from "@/components/credentials/verify-credential";
 import DigilockerPopup from "@/components/digilocker/DigilockerPopup";
 
+const NSQF_MODEL_URL = "http://localhost:4500";
+
 // --- INTERFACES AND TYPES ---
 type VerifyValues = {
   name: string;
@@ -19,7 +21,7 @@ type VerifyValues = {
   issued_by: string;
   passed_at: string;
   verification_link?: string;
-  nsqf_level?: string;
+  nsqf_level_display?: string;
   syllabus: string;
   outcomes: string;
   jobs: string;
@@ -36,6 +38,19 @@ type CertificateData = {
   createdAt: string;
 };
 
+type NsqfRequest = {
+  courseName: string;
+  syllabusCovered: string;
+  jobDescription: string;
+};
+
+type NsqfResponse = {
+  predicted_nsqf: number;
+  doubled_int: number;
+  keywords: string[];
+  tags: string[];
+};
+
 export default function VerifyPage() {
   const [file, setFile] = React.useState<File | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
@@ -45,6 +60,7 @@ export default function VerifyPage() {
   const [verificationResult, setVerificationResult] = React.useState<VerificationResult | null>(null);
   const [digilockerOpen, setDigilockerOpen] = React.useState(false);
   const [certifMedium, setCertifMedium] = React.useState<"upload" | "digilocker">("upload");
+  const [nsqfLevel, setNsqfLevel] = React.useState<NsqfResponse>({} as NsqfResponse);
 
   const form = useForm<VerifyValues>({
     defaultValues: {
@@ -53,7 +69,7 @@ export default function VerifyPage() {
       issued_by: "",
       passed_at: "",
       verification_link: "",
-      nsqf_level: "",
+      nsqf_level_display: "",
       syllabus: "",
       outcomes: "",
       jobs: "",
@@ -92,6 +108,59 @@ export default function VerifyPage() {
   React.useEffect(() => {
     fetchCertificates();
   }, []);
+
+  const fetchNsqfLevel = async () => {
+    const name = form.getValues("name");
+    const syllabus = form.getValues("syllabus");
+    const jobs = form.getValues("jobs");
+
+    if (!name) { toast.error("Course/Certificate name is required"); return; }
+    if (!syllabus) { toast.error("Syllabus is required"); return; }
+    if (!jobs) { toast.error("Job roles you are looking for are required"); return; }
+
+    let submissionToastId: string | number | undefined;
+
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("Authentication token not found. Please log in.");
+
+      const formData = {} as NsqfRequest;
+      formData["courseName"] = name;
+      formData["syllabusCovered"] = syllabus;
+      formData["jobDescription"] = jobs;
+
+      // console.log("[debug]: NSQF model request payload:", formData);
+      // console.log("[debug]: NSQF model request payload:", JSON.stringify(formData));
+
+      const response = await fetch(`${NSQF_MODEL_URL}/predict`, {
+        method: "POST",
+        body: JSON.stringify(formData),
+        headers: {
+          "Content-Type": "application/json",
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const result = await response.json();
+      // console.log("[debug]: NSQF model response:", result);
+      if (!response.ok) throw new Error(result.error || "Submission failed");
+
+      const { predicted_nsqf, doubled_int, keywords, tags } = result as NsqfResponse;
+      if (!predicted_nsqf || !doubled_int) throw new Error("Invalid response from NSQF model");
+
+      setNsqfLevel({ predicted_nsqf, doubled_int, keywords, tags });
+      form.setValue("nsqf_level_display", predicted_nsqf.toString());
+
+      submissionToastId = toast.success(result.message || "successfully fetched NSQF level!");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+      if (submissionToastId) {
+        toast.error(`Operation failed: ${errorMessage}`, { id: submissionToastId });
+      } else {
+        toast.error(`Submission failed: ${errorMessage}`);
+      }
+    }
+  };
 
   // ✅ UPDATED: onSubmit now sends all required fields for both ML models
   const onSubmit = async (values: VerifyValues) => {
@@ -133,6 +202,12 @@ export default function VerifyPage() {
 
       // setting up the certif_medium
       formData.append("certif_medium", certifMedium);
+
+      // updated nsqf_level related fields
+      formData.append("nsqf_level", nsqfLevel.predicted_nsqf?.toString() || "0.0");
+      formData.append("confidence", nsqfLevel.doubled_int?.toString() || "0");
+      formData.append("tags", JSON.stringify(nsqfLevel.tags || []));
+      formData.append("keywords", JSON.stringify(nsqfLevel.keywords || []));
 
       const response = await fetch("/api/certificate/add", {
         method: "POST",
@@ -239,21 +314,14 @@ export default function VerifyPage() {
                         <FormMessage />
                       </FormItem>
                     )} />
-                    <FormField control={form.control} name="nsqf_level" render={({ field }) => (
+                    <FormField control={form.control} name="verification_link" render={({ field }) => (
                       <FormItem>
-                        <FormLabel>NSQF Level (Optional)</FormLabel>
-                        <FormControl><Input placeholder="e.g., 7" {...field} /></FormControl>
+                        <FormLabel>Verification Link</FormLabel>
+                        <FormControl><Input placeholder="https://www.credly.com/your-badge-link" {...field} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )} />
                   </div>
-                  <FormField control={form.control} name="verification_link" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Verification Link</FormLabel>
-                      <FormControl><Input placeholder="https://www.credly.com/your-badge-link" {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
 
                   <hr />
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -300,10 +368,41 @@ export default function VerifyPage() {
                       <FormMessage />
                     </FormItem>
                   )} />
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <FormField control={form.control} name="nsqf_level_display" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>NSQF Level</FormLabel>
+                        <FormControl>
+                          <Input
+                            disabled
+                            placeholder="Generated NSQF Level e.g. 4.5" {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <Button
+                      type="button"
+                      onClick={fetchNsqfLevel}
+                      variant="default"
+                      className="mt-6"
+                    >
+                      Get My NSQF Level
+                    </Button>
+                  </div>
 
                   <div className="flex items-center justify-end gap-2">
-                    <Button type="reset" variant="ghost" onClick={() => { form.reset(); setFile(null); }}>Reset</Button>
-                    <Button type="submit" disabled={submitting}>{submitting ? "Submitting..." : "Submit for Verification"}</Button>
+                    <Button
+                      type="reset"
+                      variant="ghost"
+                      onClick={() => { form.reset(); setFile(null); }}>
+                      Reset
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={submitting}>
+                      {submitting ? "Submitting..." : "Submit for Verification"}
+                    </Button>
                   </div>
                 </form>
               </Form>
