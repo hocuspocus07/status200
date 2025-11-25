@@ -49,8 +49,9 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
+import { FileDown } from "lucide-react";
 interface Certificate {
-  _id: string; 
+  _id: string;
   course: string;
   issued_by: string;
   nsqf_level: string;
@@ -106,6 +107,7 @@ export default function UserProfilePage() {
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("idle");
   const [connectionId, setConnectionId] = useState<string | null>(null); // For 'connected' or 'pending-in'
   const [isConnecting, setIsConnecting] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [token, setToken] = useState<string | null>(null);
   const formatDate = (raw: any) => {
     try {
@@ -116,6 +118,80 @@ export default function UserProfilePage() {
       });
     } catch {
       return "Invalid Date";
+    }
+  };
+  const handleDownloadCertificatesPdf = async () => {
+    if (!user || !user.certificates?.length) {
+      toast.info("No certificates to download.");
+      return;
+    }
+
+    setIsDownloading(true);
+    const apiEndpoint = '/api/report';
+const certData = user.certificates
+  .map(cert => {
+    return {
+      url: cert.bucket_image_url,
+      name: cert.course,
+      id:cert._id,
+    };
+  })
+  .filter(c => c.url);
+    if (certData.length === 0) {
+      toast.warning("Certificate images are missing.");
+      setIsDownloading(false);
+      return;
+    }
+
+    const downloadToastId = toast.loading("Generating PDF report...");
+
+    try {
+      const response = await fetch(apiEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({certificates: certData }),
+      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Server responded with status ${response.status}: ${errorText}`);
+      }
+
+      // 2. Get the PDF data as a Blob
+      const pdfBlob = await response.blob();
+      let filename = `${user.name.replace(/\s/g, '_')}_Certificates_Report.pdf`;
+      const contentDisposition = response.headers.get('Content-Disposition');
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename="(.+?)"/i);
+        if (match && match[1]) {
+          filename = match[1];
+        }
+      }
+
+      // 4. Create a URL for the Blob object
+      const url = window.URL.createObjectURL(pdfBlob);
+
+      // 5. Create a temporary <a> element to trigger the download
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+
+      // 6. Programmatically click the link to initiate the download
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+
+      // 7. Revoke the Blob URL to free up memory
+      window.URL.revokeObjectURL(url);
+
+      toast.success("PDF generated successfully! Download started.", { id: downloadToastId });
+
+    } catch (error) {
+      console.error('Error during PDF download:', error);
+      toast.error("Failed to generate PDF. Please try again.", { id: downloadToastId });
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -441,7 +517,7 @@ export default function UserProfilePage() {
             <div className="flex gap-2">
               {renderConnectionButtons()}
               {(isProfilePublic || connectionStatus === "connected") && (
-              <Button variant="default" size="sm">Message</Button>)}
+                <Button variant="default" size="sm">Message</Button>)}
             </div>
           </div>
 
@@ -510,54 +586,70 @@ export default function UserProfilePage() {
                       <Award className="h-5 w-5" /> Verified Certificates
                     </CardTitle>
                     <CardDescription>Credentials earned by {user.name}</CardDescription>
+                    {user.certificates?.length > 0 && (
+                      <Button
+                        size="sm"
+                        onClick={handleDownloadCertificatesPdf}
+                        disabled={isDownloading}
+                        variant="outline"
+                        className="text-sm"
+                      >
+                        {isDownloading ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <FileDown className="mr-2 h-4 w-4" />
+                        )}
+                        Download PDF
+                      </Button>
+                    )}
                   </CardHeader>
 
                   <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {user.certificates?.length ? (
                       user.certificates.map((cert, i) => (
                         <Link href={`/dashboard/certificates/${cert._id}`} key={cert._id}>
-                        <Card className="overflow-hidden shadow-lg hover:shadow-xl">
-                          <img
-                            src={cert.bucket_image_url}
-                            alt={cert.course}
-                            className="w-full h-48 object-cover"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement;
-                              target.src = `https://placehold.co/600x400?text=${cert.course}`;
-                            }}
-                          />
-                          <CardHeader>
-                            <CardTitle className="text-lg">{cert.course}</CardTitle>
-                            <CardDescription>Issued by: {cert.issued_by}</CardDescription>
-                          </CardHeader>
-                          <CardContent className="space-y-2 text-sm">
-                            <div className="flex items-center gap-2">
-                              <BookMarked className="h-4 w-4" />
-                              NSQF Level: {cert.nsqf_level}
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <CalendarDays className="h-4 w-4" />
-                              Passed: {formatDate(cert.passed_at)}
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <UserCheck className="h-4 w-4" />
-                              Status:{" "}
-                              {cert.is_verified ? (
-                                <span className="text-green-500 font-semibold">Verified</span>
-                              ) : (
-                                <span className="text-yellow-500 font-semibold">Pending</span>
-                              )}
-                            </div>
-                            {cert.blockchain_certificate_hash && (
-                              <div className="flex items-center gap-2 text-xs pt-2">
-                                <LinkIcon className="h-3 w-3" />
-                                <span className="truncate">
-                                  Hash: {cert.blockchain_certificate_hash}
-                                </span>
+                          <Card className="overflow-hidden shadow-lg hover:shadow-xl">
+                            <img
+                              src={cert.bucket_image_url}
+                              alt={cert.course}
+                              className="w-full h-48 object-cover"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.src = `https://placehold.co/600x400?text=${cert.course}`;
+                              }}
+                            />
+                            <CardHeader>
+                              <CardTitle className="text-lg">{cert.course}</CardTitle>
+                              <CardDescription>Issued by: {cert.issued_by}</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-2 text-sm">
+                              <div className="flex items-center gap-2">
+                                <BookMarked className="h-4 w-4" />
+                                NSQF Level: {cert.nsqf_level}
                               </div>
-                            )}
-                          </CardContent>
-                        </Card>
+                              <div className="flex items-center gap-2">
+                                <CalendarDays className="h-4 w-4" />
+                                Passed: {formatDate(cert.passed_at)}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <UserCheck className="h-4 w-4" />
+                                Status:{" "}
+                                {cert.is_verified ? (
+                                  <span className="text-green-500 font-semibold">Verified</span>
+                                ) : (
+                                  <span className="text-yellow-500 font-semibold">Pending</span>
+                                )}
+                              </div>
+                              {cert.blockchain_certificate_hash && (
+                                <div className="flex items-center gap-2 text-xs pt-2">
+                                  <LinkIcon className="h-3 w-3" />
+                                  <span className="truncate">
+                                    Hash: {cert.blockchain_certificate_hash}
+                                  </span>
+                                </div>
+                              )}
+                            </CardContent>
+                          </Card>
                         </Link>
                       ))
                     ) : (
