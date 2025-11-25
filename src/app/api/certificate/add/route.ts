@@ -13,7 +13,7 @@ cloudinary.config({
 });
 
 const FORGERY_MODEL_URL = process.env.NEXT_PUBLIC_FORGERY_MODEL || "http://localhost:5000";
-const NSQF_MODEL_URL = process.env.NEXT_PUBLIC_NSQF_MODEL || "http://localhost:8000";
+// const NSQF_MODEL_URL = process.env.NEXT_PUBLIC_NSQF_MODEL || "http://localhost:8000";
 
 const uploadToCloudinary = (file: File): Promise<{ secure_url: string, public_id: string }> => {
   return new Promise((resolve, reject) => {
@@ -65,10 +65,17 @@ export async function POST(req: NextRequest) {
     const outcomes = formData.get("outcomes") as string;
     const jobs = formData.get("jobs") as string;
 
-    // ✅ ADDED: Retrieve optional fields for the second ML model
-    const duration = formData.get("duration") as string | null;
-    const credits = formData.get("credits") as string | null;
-    const projects = formData.get("projects") as string | null;
+    // Retrieve NSQF analysis results from form data
+    const analysisResult = {
+      nsqf_level: formData.get("nsqf_level") as string || "0.0",
+      confidence: parseFloat(formData.get("confidence") as string) || 0,
+      tags: JSON.parse(formData.get("tags") as string) as string[] || [],
+      keywords: JSON.parse(formData.get("keywords") as string) as string[] || [],
+    };
+
+    // const duration = formData.get("duration") as string | null;
+    // const credits = formData.get("credits") as string | null;
+    // const projects = formData.get("projects") as string | null;
 
     // how the form was uploaded
     const certif_medium = formData.get("certif_medium") as "upload" | "digilocker" | null;
@@ -86,37 +93,21 @@ export async function POST(req: NextRequest) {
     // 2. Call Cloudinary and both ML models concurrently
     const [
       uploadResult,
-      verificationResult,
-      analysisResult
+      verificationResult
     ] = await Promise.all([
       uploadToCloudinary(certificateFile),
 
       // ML Model 1 (port 5000): Image verification
+      // If from digilocker, skip image model and assume not suspicious
       certif_medium === "upload"
         ? fetch(`${FORGERY_MODEL_URL}/analyze-forgery`, {
           method: "POST",
           body: imageFormData, // Send only the relevant data
         }).then(res => res.json())
         : Promise.resolve({ analysis: { decision: { is_suspicious: false } } }),
-      // If from digilocker, skip image model and assume not suspicious
-
-      // ✅ CORRECTED: Completed the JSON body for the text analysis model
-      fetch(`${NSQF_MODEL_URL}/predict`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          courseName: course,
-          syllabus: syllabus,
-          courseOutcomes: outcomes,
-          jobOpportunities: jobs,
-          duration: duration || "",
-          credits: credits || "",
-          // Assuming projects are entered as a comma-separated string in the textarea
-          projects: projects ? projects.split(',').map(p => p.trim()) : [],
-        }),
-      }).then(res => res.json())
     ]);
-    console.log("Verification Result:", verificationResult);
+    console.log("[debug]: Verification Result:", verificationResult);
+    console.log("[debug]: model analysis result:", analysisResult);
 
     // 3. Consolidate all data for MongoDB
     const newCertificateData = {
@@ -132,11 +123,8 @@ export async function POST(req: NextRequest) {
       tags: analysisResult.tags,
       keywords: analysisResult.keywords,
       reasons_for_failure: verificationResult.analysis.decision.reasons || [],
-
     };
-    // console.log("model analysis result:", analysisResult);
-
-    console.log("New Certificate Data:", newCertificateData);
+    console.log("[debug]: New Certificate Data:", newCertificateData);
 
     // 4. Save the initial certificate data to the user
     user.certificates.push(newCertificateData);
