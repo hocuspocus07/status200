@@ -15,7 +15,16 @@ export interface ICertificate extends Document {
   confidence?: number;
   tags?: string[];
   keywords?: string[];
+
+  // additional fields for pathways
+  syllabus?: string;
+  outcomes?: string;
+  jobs?: string;
+  certif_medium?: "upload" | "digilocker";
+
+  createdAt: Date;
 }
+
 
 export const CertificateSchema = new Schema<ICertificate>({
   issued_to: { type: String, required: true },
@@ -32,6 +41,14 @@ export const CertificateSchema = new Schema<ICertificate>({
   confidence: { type: Number },
   tags: { type: [String], default: [] },
   keywords: { type: [String], default: [] },
+
+  // additional fields for pathways
+  syllabus: { type: String },
+  outcomes: { type: String },
+  jobs: { type: String },
+  certif_medium: { type: String, enum: ["upload", "digilocker"] },
+
+  createdAt: { type: Date, default: Date.now },
 });
 
 export default mongoose.models.Certificate || mongoose.model<ICertificate>("Certificate", CertificateSchema);

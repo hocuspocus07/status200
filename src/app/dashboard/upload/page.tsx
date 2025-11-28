@@ -172,6 +172,7 @@ export default function VerifyPage() {
     if (!values.syllabus) { toast.error("Syllabus is required"); return; }
     if (!values.outcomes) { toast.error("Course outcomes are required"); return; }
     if (!values.jobs) { toast.error("Job roles you are looking for are required"); return; }
+    if (!nsqfLevel.predicted_nsqf) { toast.error("Please fetch your NSQF level before submitting."); return; }
     if (!file) { toast.error("Please upload your image certificate."); return; }
 
     setSubmitting(true);
@@ -204,7 +205,7 @@ export default function VerifyPage() {
       formData.append("certif_medium", certifMedium);
 
       // updated nsqf_level related fields
-      formData.append("nsqf_level", nsqfLevel.predicted_nsqf?.toString() || "0.0");
+      formData.append("nsqf_level", nsqfLevel.predicted_nsqf.toString());
       formData.append("confidence", nsqfLevel.doubled_int?.toString() || "0");
       formData.append("tags", JSON.stringify(nsqfLevel.tags || []));
       formData.append("keywords", JSON.stringify(nsqfLevel.keywords || []));

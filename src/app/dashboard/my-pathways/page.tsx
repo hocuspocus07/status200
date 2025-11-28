@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { jwtDecode } from "jwt-decode";
 
 // --- INTERFACES ---
 interface Certificate {
@@ -15,22 +14,27 @@ interface Certificate {
   verification_link: string;
   bucket_image_url?: string;
   nsqf_level?: string;
-  blockchain_certificate_hash?: string;
   reasons_for_failure?: string[];
-  transaction_hash?: string;
+
+  // additional fields for pathways
+  syllabus?: string;
+  outcomes?: string;
+  jobs?: string;
+  certif_medium?: "upload" | "digilocker";
 }
-interface BlockchainData {
-  certHash: string;
-  courseHash: string;
-  issuerHash: string;
-  issuedOn: number;
+
+// New Interfaces for Pathway API
+interface PathwayCourse {
+  NSQFLevel: number;
+  courseName: string;
+  idx: number;
+  similarity: number;
+  syllabusCovered: string;
 }
-interface DecodedToken {
-  id: string;
-  email: string;
-  learnerIdHash: string;
-  iat: number;
-  exp: number;
+
+interface PathwayResponse {
+  pathway: PathwayCourse[];
+  start_level: number;
 }
 
 // --- HELPER COMPONENTS ---
@@ -65,15 +69,15 @@ const CertificateBar = ({ certificate, onClick }: { certificate: Certificate; on
 const CertificateModal = ({
   certificate,
   onClose,
-  onFetchBlockchain,
-  blockchainData,
-  loadingChain,
+  onFetchPathways,
+  pathwayData,
+  loadingPathways
 }: {
   certificate: Certificate;
   onClose: () => void;
-  onFetchBlockchain: () => void;
-  blockchainData: BlockchainData | null;
-  loadingChain: boolean;
+  onFetchPathways: () => void;
+  pathwayData: PathwayResponse | null;
+  loadingPathways: boolean;
 }) => {
   const status = getStatusProps(certificate);
 
@@ -86,15 +90,16 @@ const CertificateModal = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50 p-4" onClick={onClose}>
-      <div className="bg-gray-900 border border-gray-700 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-gray-900 border border-gray-700 rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         {/* Modal Header */}
         <div className="flex justify-between items-center p-4 border-b border-gray-700 flex-shrink-0">
           <h2 className="text-xl font-bold text-cyan-400">{certificate.course}</h2>
           <button onClick={onClose} className="text-gray-400 text-2xl leading-none hover:text-white">&times;</button>
         </div>
 
-        <div className="overflow-y-auto p-6 space-y-6">
+        <div className="overflow-y-auto p-6 space-y-8">
 
+          {/* Basic Details */}
           <div>
             <h3 className="text-lg font-semibold text-white mb-4">Certificate Details</h3>
             {certificate.bucket_image_url && (
@@ -117,40 +122,49 @@ const CertificateModal = ({
             )}
           </div>
 
-          {/* Blockchain section */}
-          {certificate.blockchain_certificate_hash && (
-            <div>
-              <hr className="border-gray-700 my-6" />
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-white mb-4">Blockchain Verification</h3>
+          {/* Progression Pathways Section */}
+          <div>
+            <hr className="border-gray-700 mb-6" />
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white">Career Progression Pathways</h3>
+              {!pathwayData && (
                 <button
-                  className={`w-full px-4 py-2 rounded font-medium transition-colors ${loadingChain ? "bg-gray-700 cursor-not-allowed" : "bg-white text-black hover:bg-gray-200"}`}
-                  onClick={onFetchBlockchain}
-                  disabled={loadingChain}
+                  onClick={onFetchPathways}
+                  disabled={loadingPathways}
+                  className={`px-4 py-2 text-sm rounded font-medium transition-colors ${loadingPathways ? "bg-gray-700 cursor-not-allowed" : "bg-cyan-600 text-white hover:bg-cyan-500"}`}
                 >
-                  {loadingChain ? "Verifying on Blockchain..." : "Verify on Blockchain"}
+                  {loadingPathways ? "Generating..." : "Generate Pathways"}
                 </button>
-                {blockchainData && (
-                  <div className="mt-4 p-4 bg-gray-800 border border-gray-600 rounded-lg space-y-2 text-xs break-words font-mono">
-                    <p><span className="font-medium text-gray-400">Certificate Hash:</span> {blockchainData.certHash}</p>
-                    <p><span className="font-medium text-gray-400">Course Hash:</span> {blockchainData.courseHash}</p>
-                    <p><span className="font-medium text-gray-400">Issuer Hash:</span> {blockchainData.issuerHash}</p>
-                    <p><span className="font-medium text-gray-400">Issued On:</span> {new Date(blockchainData.issuedOn * 1000).toLocaleString()}</p>
-                  </div>
-                )}
-                {certificate.transaction_hash && (
-                  <a
-                    href={`https://amoy.polygonscan.com/tx/${certificate.transaction_hash}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-2 inline-block w-full text-center px-4 py-2 rounded font-medium transition-colors bg-gray-600 text-white hover:bg-gray-500"
-                  >
-                    View Transaction on PolygonScan
-                  </a>
-                )}
-              </div>
+              )}
             </div>
-          )}
+
+            {pathwayData && (
+              <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="p-3 bg-gray-800/50 rounded border border-gray-700 text-sm text-gray-300">
+                  <span className="font-semibold text-cyan-400">Current Level:</span> NSQF {pathwayData.start_level}
+                </div>
+                <div className="grid gap-4">
+                  {pathwayData.pathway.map((path, idx) => (
+                    <div key={idx} className="p-4 bg-gray-800 border border-gray-700 rounded-lg hover:border-cyan-500/50 transition-colors">
+                      <div className="flex justify-between items-start mb-2">
+                        <h4 className="font-bold text-white text-lg">{path.courseName}</h4>
+                        <span className="px-2 py-1 bg-purple-900/50 text-purple-200 text-xs rounded border border-purple-700">
+                          NSQF {path.NSQFLevel}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 mb-3 text-xs text-gray-400">
+                        <div className="w-full bg-gray-700 rounded-full h-1.5 max-w-[100px]">
+                          <div className="bg-cyan-500 h-1.5 rounded-full" style={{ width: `${path.similarity * 100}%` }}></div>
+                        </div>
+                        <span>{(path.similarity * 100).toFixed(0)}% Match</span>
+                      </div>
+                      <p className="text-sm text-gray-300 leading-relaxed">{path.syllabusCovered}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -162,9 +176,10 @@ export default function MyCertificatesPage() {
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCertificate, setSelectedCertificate] = useState<Certificate | null>(null);
-  const [blockchainData, setBlockchainData] = useState<Record<string, BlockchainData | null>>({});
-  const [loadingChain, setLoadingChain] = useState<Record<string, boolean>>({});
-  const [user, setUser] = useState<{ learnerIdHash: string } | null>(null);
+
+  // Pathway State
+  const [pathwayData, setPathwayData] = useState<Record<string, PathwayResponse | null>>({});
+  const [loadingPathways, setLoadingPathways] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const initializePage = async () => {
@@ -172,15 +187,6 @@ export default function MyCertificatesPage() {
       const token = localStorage.getItem("token");
       if (!token) {
         toast.error("You are not logged in.");
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        const decodedToken: DecodedToken = jwtDecode(token);
-        setUser({ learnerIdHash: decodedToken.learnerIdHash });
-      } catch (error) {
-        toast.error("Invalid session token. Please log in again.");
         setIsLoading(false);
         return;
       }
@@ -197,6 +203,7 @@ export default function MyCertificatesPage() {
         }
 
         const data = await response.json();
+        console.log("[debug]: Fetched certificates:", data);
         setCertificates(data.certificates || []);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Could not fetch certificates.";
@@ -210,29 +217,38 @@ export default function MyCertificatesPage() {
     initializePage();
   }, []);
 
-  const handleFetchBlockchain = async (certificate: Certificate) => {
-    const certHash = certificate.blockchain_certificate_hash;
-    if (!user || !certHash) return;
+  const handleFetchPathways = async (certificate: Certificate) => {
+    const certId = certificate._id;
 
-    setLoadingChain((prev) => ({ ...prev, [certHash]: true }));
+    // If we already have data, don't fetch again (optional optimization)
+    if (pathwayData[certId]) return;
+
+    setLoadingPathways((prev) => ({ ...prev, [certId]: true }));
+
     try {
-      const res = await fetch("/api/blockchain-verification", {
+      // Using the localhost:4500 endpoint as requested
+      const res = await fetch("http://localhost:4500/pathway", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          learnerIdHash: user.learnerIdHash,
-          certHash: certHash
+          courseName: certificate.course,
+          syllabusCovered: certificate.syllabus || "",
+          jobDescription: certificate.jobs || ""
         }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to fetch from blockchain");
-      setBlockchainData((prev) => ({ ...prev, [certHash]: data }));
+
+      if (!res.ok) {
+        throw new Error(`Pathway API Error: ${res.statusText}`);
+      }
+
+      const data: PathwayResponse = await res.json();
+      setPathwayData((prev) => ({ ...prev, [certId]: data }));
+      toast.success("Pathways generated successfully!");
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Verification failed.";
-      toast.error(errorMessage);
-      setBlockchainData((prev) => ({ ...prev, [certHash]: null }));
+      console.error(err);
+      toast.error("Failed to generate pathways. Ensure the AI service is running.");
     } finally {
-      setLoadingChain((prev) => ({ ...prev, [certHash]: false }));
+      setLoadingPathways((prev) => ({ ...prev, [certId]: false }));
     }
   };
 
@@ -263,9 +279,11 @@ export default function MyCertificatesPage() {
         <CertificateModal
           certificate={selectedCertificate}
           onClose={() => setSelectedCertificate(null)}
-          onFetchBlockchain={() => handleFetchBlockchain(selectedCertificate)}
-          blockchainData={selectedCertificate.blockchain_certificate_hash ? blockchainData[selectedCertificate.blockchain_certificate_hash] : null}
-          loadingChain={selectedCertificate.blockchain_certificate_hash ? !!loadingChain[selectedCertificate.blockchain_certificate_hash] : false}
+
+          // Pathway Props
+          onFetchPathways={() => handleFetchPathways(selectedCertificate)}
+          pathwayData={pathwayData[selectedCertificate._id] || null}
+          loadingPathways={!!loadingPathways[selectedCertificate._id]}
         />
       )}
     </div>

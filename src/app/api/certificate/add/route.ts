@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
     // const projects = formData.get("projects") as string | null;
 
     // how the form was uploaded
-    const certif_medium = formData.get("certif_medium") as "upload" | "digilocker" | null;
+    const certif_medium = formData.get("certif_medium") as "upload" | "digilocker" | null; // will update this to handle institution (later)
     console.log("[debug]: Certificate upload medium:", certif_medium);
 
     if (!certificateFile || !course || !issued_to || !issued_by || !passed_at_string || !syllabus || !outcomes || !jobs || !certif_medium) {
@@ -123,6 +123,12 @@ export async function POST(req: NextRequest) {
       tags: analysisResult.tags,
       keywords: analysisResult.keywords,
       reasons_for_failure: verificationResult.analysis.decision.reasons || [],
+
+      // additional fields for pathways
+      syllabus,
+      outcomes,
+      jobs,
+      certif_medium,
     };
     console.log("[debug]: New Certificate Data:", newCertificateData);
 

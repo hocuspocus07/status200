@@ -19,11 +19,13 @@ import {
   Menu,
   User,
   MessageCircleMore,
+  Rocket
 } from "lucide-react"
 
 const learnerNavigation = [
   { name: "Dashboard", href: "/dashboard", icon: Home },
   { name: "My Credentials", href: "/dashboard/my-credentials", icon: Award },
+  { name: "Pathways", href: "/dashboard/my-pathways", icon: Rocket },
   { name: "Upload a certificate", href: "/dashboard/upload", icon: FileText },
   { name: "Jobs", href: "/dashboard/jobs", icon: Briefcase },
   { name: "Network", href: "/dashboard/network", icon: Users },
