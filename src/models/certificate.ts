@@ -23,6 +23,8 @@ export interface ICertificate extends Document {
   certif_medium?: "upload" | "digilocker";
 
   createdAt: Date;
+  are_claims_verified?: boolean;
+  claims_similarity?: number;
 }
 
 
@@ -49,6 +51,8 @@ export const CertificateSchema = new Schema<ICertificate>({
   certif_medium: { type: String, enum: ["upload", "digilocker"] },
 
   createdAt: { type: Date, default: Date.now },
+  are_claims_verified: { type: Boolean },
+  claims_similarity: { type: Number },
 });
 
 export default mongoose.models.Certificate || mongoose.model<ICertificate>("Certificate", CertificateSchema);

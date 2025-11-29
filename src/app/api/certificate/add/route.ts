@@ -13,7 +13,13 @@ cloudinary.config({
 });
 
 const FORGERY_MODEL_URL = process.env.NEXT_PUBLIC_FORGERY_MODEL || "http://localhost:5000";
-// const NSQF_MODEL_URL = process.env.NEXT_PUBLIC_NSQF_MODEL || "http://localhost:8000";
+const NSQF_MODEL_URL = process.env.NEXT_PUBLIC_NSQF_MODEL || "http://localhost:4500";
+const CRAWLER_URL = process.env.NEXT_PUBLIC_CRAWLER_SERVICE || "http://localhost:9900";
+
+interface claimsVerifiedResult {
+  are_claims_verified: boolean;
+  similarity?: number;
+}
 
 const uploadToCloudinary = (file: File): Promise<{ secure_url: string, public_id: string }> => {
   return new Promise((resolve, reject) => {
@@ -41,6 +47,70 @@ const uploadToCloudinary = (file: File): Promise<{ secure_url: string, public_id
   });
 };
 
+/**
+ * @todo add another param for course_instructor when available
+ */
+const analyzeClaims = (course: string, issued_by: string, syllabus: string, outcomes: string): Promise<claimsVerifiedResult> => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const reqObj = {
+        courseName: course,
+        courseOfferedBy: issued_by,
+        courseInstructor: ""
+      };
+
+      // 1. Fetch actual course data from crawler service
+      const actualCourseRequest = await fetch(`${CRAWLER_URL}/course-data`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(reqObj),
+      });
+
+      if (!actualCourseRequest.ok) {
+        console.error("Failed to fetch actual course data from crawler.");
+        return resolve({ are_claims_verified: false });
+      }
+
+      const { title, h1 = '', description, additionalText = '' } = await actualCourseRequest.json();
+      if (!title || !description) {
+        console.warn("No actual course data found from crawler.");
+        return resolve({ are_claims_verified: false });
+      }
+
+      // yes we have actual course data
+      // 2. Prepare data for NSQF model
+      const nsqfReqObj = {
+        userData: `Course: ${course} by ${issued_by}\nDescription: ${syllabus}, ${outcomes}`,
+        courseData: `Course: ${title}, ${h1}\nDescription: ${description}, ${additionalText}`,
+      };
+
+      const nsqfResponse = await fetch(`${NSQF_MODEL_URL}/similarity`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(nsqfReqObj),
+      });
+
+      if (!nsqfResponse.ok) {
+        console.error("NSQF model request failed.");
+        return resolve({ are_claims_verified: false });
+      }
+
+      const nsqfResult = await nsqfResponse.json();
+      console.log("NSQF model result:", nsqfResult);
+      if (nsqfResult.similarity && nsqfResult.similarity >= 0.75) {
+        console.log("Claims verified by NSQF model., similarity:", nsqfResult.similarity);
+        resolve({ are_claims_verified: true, similarity: nsqfResult.similarity });
+      } else {
+        console.log("Claims NOT verified by NSQF model., similarity:", nsqfResult.similarity);
+        resolve({ are_claims_verified: false, similarity: nsqfResult.similarity });
+      }
+
+    } catch (error) {
+      console.error("Error analyzing claims:", error);
+      reject(error);
+    }
+  });
+};
 
 export async function POST(req: NextRequest) {
   try {
@@ -55,6 +125,7 @@ export async function POST(req: NextRequest) {
 
     console.log("[debug]: req: ", req);
     const formData = await req.formData();
+
     const certificateFile = formData.get("certificate") as File | null;
     const course = formData.get("course") as string;
     const issued_to = formData.get("issued_to") as string;
@@ -67,7 +138,7 @@ export async function POST(req: NextRequest) {
 
     // Retrieve NSQF analysis results from form data
     const analysisResult = {
-      nsqf_level: formData.get("nsqf_level") as string || "0.0",
+      nsqf_level: formData.get("nsqf_level") as string,
       confidence: parseFloat(formData.get("confidence") as string) || 0,
       tags: JSON.parse(formData.get("tags") as string) as string[] || [],
       keywords: JSON.parse(formData.get("keywords") as string) as string[] || [],
@@ -79,9 +150,13 @@ export async function POST(req: NextRequest) {
 
     // how the form was uploaded
     const certif_medium = formData.get("certif_medium") as "upload" | "digilocker" | null; // will update this to handle institution (later)
-    console.log("[debug]: Certificate upload medium:", certif_medium);
 
-    if (!certificateFile || !course || !issued_to || !issued_by || !passed_at_string || !syllabus || !outcomes || !jobs || !certif_medium) {
+    if (!certificateFile || !course ||
+      !issued_to || !issued_by ||
+      !passed_at_string ||
+      !syllabus || !outcomes || !jobs ||
+      !certif_medium ||
+      !analysisResult.nsqf_level) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
     const passed_at = new Date(passed_at_string);
@@ -93,7 +168,8 @@ export async function POST(req: NextRequest) {
     // 2. Call Cloudinary and both ML models concurrently
     const [
       uploadResult,
-      verificationResult
+      verificationResult,
+      claimsVerified
     ] = await Promise.all([
       uploadToCloudinary(certificateFile),
 
@@ -105,9 +181,13 @@ export async function POST(req: NextRequest) {
           body: imageFormData, // Send only the relevant data
         }).then(res => res.json())
         : Promise.resolve({ analysis: { decision: { is_suspicious: false } } }),
+
+      // fetch actual course data from crawler service
+      analyzeClaims(course, issued_by, syllabus, outcomes),
     ]);
     console.log("[debug]: Verification Result:", verificationResult);
     console.log("[debug]: model analysis result:", analysisResult);
+    console.log("[debug]: Claims Verified Result:", claimsVerified);
 
     // 3. Consolidate all data for MongoDB
     const newCertificateData = {
@@ -117,7 +197,7 @@ export async function POST(req: NextRequest) {
       passed_at,
       verification_link,
       bucket_image_url: uploadResult.secure_url,
-      is_verified: !verificationResult.analysis.decision.is_suspicious,
+      is_verified: !verificationResult.analysis.decision.is_suspicious && claimsVerified.are_claims_verified,
       nsqf_level: analysisResult.nsqf_level,
       confidence: analysisResult.confidence,
       tags: analysisResult.tags,
@@ -129,6 +209,9 @@ export async function POST(req: NextRequest) {
       outcomes,
       jobs,
       certif_medium,
+
+      are_claims_verified: claimsVerified.are_claims_verified,
+      claims_similarity: claimsVerified.similarity,
     };
     console.log("[debug]: New Certificate Data:", newCertificateData);
 
@@ -163,8 +246,8 @@ export async function POST(req: NextRequest) {
         message = "Certificate verified, but failed to register on blockchain.";
       }
     } else {
-      console.log("Certificate is not verified, skipping blockchain step.");
-      message = "Certificate processed, but did not pass automatic verification.";
+      console.log("Either Certificate is not verified or claims are not verified, skipping blockchain step.");
+      message = "Certificate and claims processed, but either or both of them did not pass automatic verification.";
     }
 
     // 6. Return a final success response
