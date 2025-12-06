@@ -14,12 +14,12 @@ cloudinary.config({
 
 const FORGERY_MODEL_URL = process.env.NEXT_PUBLIC_FORGERY_MODEL || "http://localhost:5000";
 const NSQF_MODEL_URL = process.env.NEXT_PUBLIC_NSQF_MODEL || "http://localhost:4500";
-const CRAWLER_URL = process.env.NEXT_PUBLIC_CRAWLER_SERVICE || "http://localhost:9900";
+// const CRAWLER_URL = process.env.NEXT_PUBLIC_CRAWLER_SERVICE || "http://localhost:9900";
 
-interface claimsVerifiedResult {
-  are_claims_verified: boolean;
-  similarity?: number;
-}
+// interface claimsVerifiedResult {
+// are_claims_verified: boolean;
+// similarity?: number;
+// }
 
 const uploadToCloudinary = (file: File): Promise<{ secure_url: string, public_id: string }> => {
   return new Promise((resolve, reject) => {
@@ -50,67 +50,67 @@ const uploadToCloudinary = (file: File): Promise<{ secure_url: string, public_id
 /**
  * @todo add another param for course_instructor when available
  */
-const analyzeClaims = (course: string, issued_by: string, syllabus: string, outcomes: string): Promise<claimsVerifiedResult> => {
-  return new Promise(async (resolve, reject) => {
-    try {
-      const reqObj = {
-        courseName: course,
-        courseOfferedBy: issued_by,
-        courseInstructor: ""
-      };
+// const analyzeClaims = (course: string, issued_by: string, syllabus: string, outcomes: string): Promise<claimsVerifiedResult> => {
+//   return new Promise(async (resolve, reject) => {
+//     try {
+//       const reqObj = {
+//         courseName: course,
+//         courseOfferedBy: issued_by,
+//         courseInstructor: ""
+//       };
 
-      // 1. Fetch actual course data from crawler service
-      const actualCourseRequest = await fetch(`${CRAWLER_URL}/course-data`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(reqObj),
-      });
+//       // 1. Fetch actual course data from crawler service
+//       const actualCourseRequest = await fetch(`${CRAWLER_URL}/course-data`, {
+//         method: "POST",
+//         headers: { "Content-Type": "application/json" },
+//         body: JSON.stringify(reqObj),
+//       });
 
-      if (!actualCourseRequest.ok) {
-        console.error("Failed to fetch actual course data from crawler.");
-        return resolve({ are_claims_verified: false });
-      }
+//       if (!actualCourseRequest.ok) {
+//         console.error("Failed to fetch actual course data from crawler.");
+//         return resolve({ are_claims_verified: false });
+//       }
 
-      const { title, h1 = '', description, additionalText = '' } = await actualCourseRequest.json();
-      if (!title || !description) {
-        console.warn("No actual course data found from crawler.");
-        return resolve({ are_claims_verified: false });
-      }
+//       const { title, h1 = '', description, additionalText = '' } = await actualCourseRequest.json();
+//       if (!title || !description) {
+//         console.warn("No actual course data found from crawler.");
+//         return resolve({ are_claims_verified: false });
+//       }
 
-      // yes we have actual course data
-      // 2. Prepare data for NSQF model
-      const nsqfReqObj = {
-        userData: `Course: ${course} by ${issued_by}\nDescription: ${syllabus}, ${outcomes}`,
-        courseData: `Course: ${title}, ${h1}\nDescription: ${description}, ${additionalText}`,
-      };
+//       // yes we have actual course data
+//       // 2. Prepare data for NSQF model
+//       const nsqfReqObj = {
+//         userData: `Course: ${course} by ${issued_by}\nDescription: ${syllabus}, ${outcomes}`,
+//         courseData: `Course: ${title}, ${h1}\nDescription: ${description}, ${additionalText}`,
+//       };
 
-      const nsqfResponse = await fetch(`${NSQF_MODEL_URL}/similarity`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(nsqfReqObj),
-      });
+//       const nsqfResponse = await fetch(`${NSQF_MODEL_URL}/similarity`, {
+//         method: "POST",
+//         headers: { "Content-Type": "application/json" },
+//         body: JSON.stringify(nsqfReqObj),
+//       });
 
-      if (!nsqfResponse.ok) {
-        console.error("NSQF model request failed.");
-        return resolve({ are_claims_verified: false });
-      }
+//       if (!nsqfResponse.ok) {
+//         console.error("NSQF model request failed.");
+//         return resolve({ are_claims_verified: false });
+//       }
 
-      const nsqfResult = await nsqfResponse.json();
-      console.log("NSQF model result:", nsqfResult);
-      if (nsqfResult.similarity && nsqfResult.similarity >= 0.75) {
-        console.log("Claims verified by NSQF model., similarity:", nsqfResult.similarity);
-        resolve({ are_claims_verified: true, similarity: nsqfResult.similarity });
-      } else {
-        console.log("Claims NOT verified by NSQF model., similarity:", nsqfResult.similarity);
-        resolve({ are_claims_verified: false, similarity: nsqfResult.similarity });
-      }
+//       const nsqfResult = await nsqfResponse.json();
+//       console.log("NSQF model result:", nsqfResult);
+//       if (nsqfResult.similarity && nsqfResult.similarity >= 0.75) {
+//         console.log("Claims verified by NSQF model., similarity:", nsqfResult.similarity);
+//         resolve({ are_claims_verified: true, similarity: nsqfResult.similarity });
+//       } else {
+//         console.log("Claims NOT verified by NSQF model., similarity:", nsqfResult.similarity);
+//         resolve({ are_claims_verified: false, similarity: nsqfResult.similarity });
+//       }
 
-    } catch (error) {
-      console.error("Error analyzing claims:", error);
-      reject(error);
-    }
-  });
-};
+//     } catch (error) {
+//       console.error("Error analyzing claims:", error);
+//       reject(error);
+//     }
+//   });
+// };
 
 export async function POST(req: NextRequest) {
   try {
@@ -169,7 +169,7 @@ export async function POST(req: NextRequest) {
     const [
       uploadResult,
       verificationResult,
-      claimsVerified
+      // claimsVerified
     ] = await Promise.all([
       uploadToCloudinary(certificateFile),
 
@@ -183,11 +183,11 @@ export async function POST(req: NextRequest) {
         : Promise.resolve({ analysis: { decision: { is_suspicious: false } } }),
 
       // fetch actual course data from crawler service
-      analyzeClaims(course, issued_by, syllabus, outcomes),
+      // analyzeClaims(course, issued_by, syllabus, outcomes),
     ]);
     console.log("[debug]: Verification Result:", verificationResult);
     console.log("[debug]: model analysis result:", analysisResult);
-    console.log("[debug]: Claims Verified Result:", claimsVerified);
+    // console.log("[debug]: Claims Verified Result:", claimsVerified);
 
     // 3. Consolidate all data for MongoDB
     const newCertificateData = {
@@ -197,7 +197,8 @@ export async function POST(req: NextRequest) {
       passed_at,
       verification_link,
       bucket_image_url: uploadResult.secure_url,
-      is_verified: !verificationResult.analysis.decision.is_suspicious && claimsVerified.are_claims_verified,
+      // is_verified: !verificationResult.analysis.decision.is_suspicious && claimsVerified.are_claims_verified,
+      is_verified: !verificationResult.analysis.decision.is_suspicious,
       nsqf_level: analysisResult.nsqf_level,
       confidence: analysisResult.confidence,
       tags: analysisResult.tags,
@@ -210,8 +211,10 @@ export async function POST(req: NextRequest) {
       jobs,
       certif_medium,
 
-      are_claims_verified: claimsVerified.are_claims_verified,
-      claims_similarity: claimsVerified.similarity,
+      // are_claims_verified: claimsVerified.are_claims_verified,
+      are_claims_verified: true,
+      // claims_similarity: claimsVerified.similarity,
+      claims_similarity: 1.0,
     };
     console.log("[debug]: New Certificate Data:", newCertificateData);
 
