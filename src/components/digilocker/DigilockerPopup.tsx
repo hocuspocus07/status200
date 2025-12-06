@@ -89,6 +89,12 @@ export default function DigilockerPopup({ open, onOpenChange, onCertificateSelec
       headers: { Authorization: `Bearer ${token}` }
     });
 
+    if (!res.ok) {
+      setStep("email");
+      setError("Failed to fetch certificates! Try again");
+      return;
+    }
+
     const data = await res.json();
     const allCerts = data.certificates;
 
