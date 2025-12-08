@@ -149,7 +149,7 @@ export function ConnectionsTabs({ token }: ConnectionsTabsProps) {
   };
 
   const getAvatarFallback = (name: string) =>
-    name.split(" ").map((n) => n[0]).join("").toUpperCase();
+    name?.split(" ").map((n) => n[0]).join("").toUpperCase();
 
   return (
     <>
@@ -202,7 +202,7 @@ export function ConnectionsTabs({ token }: ConnectionsTabsProps) {
                       <Avatar>
                         <AvatarImage src={user.profile?.avatar} />
                         <AvatarFallback>
-                          {getAvatarFallback(user.name)}
+                          {getAvatarFallback(user?.name)}
                         </AvatarFallback>
                       </Avatar>
                       <div>
@@ -270,21 +270,21 @@ export function ConnectionsTabs({ token }: ConnectionsTabsProps) {
                     className="flex items-center justify-between"
                   >
                     <Link
-                      href={`/dashboard/profiles/${request.recipient._id}`}
+                      href={`/dashboard/profiles/${request.recipient?._id}`}
                       className="flex items-center gap-3 group"
                     >
                       <Avatar>
-                        <AvatarImage src={request.recipient.profile?.avatar} />
+                        <AvatarImage src={request.recipient?.profile?.avatar} />
                         <AvatarFallback>
-                          {getAvatarFallback(request.recipient.name)}
+                          {getAvatarFallback(request.recipient?.name)}
                         </AvatarFallback>
                       </Avatar>
                       <div>
                         <h3 className="font-semibold group-hover:underline">
-                          {request.recipient.name}
+                          {request.recipient?.name}
                         </h3>
                         <p className="text-sm text-gray-500">
-                          {request.recipient.headline || "No headline"}
+                          {request.recipient?.headline || "No headline"}
                         </p>
                       </div>
                     </Link>

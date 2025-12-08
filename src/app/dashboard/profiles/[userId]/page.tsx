@@ -293,29 +293,31 @@ const certData = user.certificates
         }
 
         const { connections } = await connRes.json();
-        const { requests: pendingRequests } = await pendingRes.json();
-        const { requests: sentRequests } = await sentRes.json();
+const { requests: pendingRequests } = await pendingRes.json();
+const { requests: sentRequests } = await sentRes.json();
 
-        const accepted = connections.find((c: any) => c.user._id === profileUserId);
-        if (accepted) {
-          setConnectionStatus("connected");
-          setConnectionId(accepted.connectionId);
-          return;
-        }
+// 1. Check accepted connections (c.user could be null)
+const accepted = connections.find((c: any) => c.user?._id === profileUserId);
+if (accepted) {
+  setConnectionStatus("connected");
+  setConnectionId(accepted.connectionId);
+  return;
+}
 
-        const pendingIn = pendingRequests.find((r: any) => r.requester._id === profileUserId);
-        if (pendingIn) {
-          setConnectionStatus("pending-in");
-          setConnectionId(pendingIn._id);
-          return;
-        }
+// 2. Check pending-in requests (r.requester could be null)
+const pendingIn = pendingRequests.find((r: any) => r.requester?._id === profileUserId);
+if (pendingIn) {
+  setConnectionStatus("pending-in");
+  setConnectionId(pendingIn._id);
+  return;
+}
 
-        const pendingOut = sentRequests.find((r: any) => r.recipient._id === profileUserId);
-        if (pendingOut) {
-          setConnectionStatus("pending-out");
-          return;
-        }
-
+// 3. Check pending-out requests (r.recipient could be null)
+const pendingOut = sentRequests.find((r: any) => r.recipient?._id === profileUserId);
+if (pendingOut) {
+  setConnectionStatus("pending-out");
+  return;
+}
         // If none match, there is no connection
         setConnectionStatus("none");
 

@@ -3,7 +3,8 @@
 import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { jwtDecode } from "jwt-decode";
-
+import { Card,CardHeader } from "@/components/ui/card";
+import { Badge } from "lucide-react";
 // --- INTERFACES ---
 interface Certificate {
   _id: string;
@@ -44,23 +45,41 @@ const getStatusProps = (cert: Certificate) => {
   return { text: 'Failed', className: 'bg-red-800 text-red-200' };
 };
 
-const CertificateBar = ({ certificate, onClick }: { certificate: Certificate; onClick: () => void; }) => {
+export function CertificateCard({
+  certificate,
+  onClick,
+}: {
+  certificate: Certificate;
+  onClick: () => void;
+}) {
   const status = getStatusProps(certificate);
+
   return (
-    <div
+    <Card
       onClick={onClick}
-      className="flex items-center justify-between p-4 border border-gray-700 rounded-lg bg-gray-900 cursor-pointer hover:border-cyan-400 transition-colors"
+      className="cursor-pointer transition hover:shadow-md hover:border-muted-foreground/30"
     >
-      <div>
-        <h3 className="font-semibold text-lg text-cyan-400">{certificate.course}</h3>
-        <p className="text-sm text-gray-400">Issued by: {certificate.issued_by}</p>
-      </div>
-      <div className={`px-3 py-1 text-xs font-medium rounded-full ${status.className}`}>
-        {status.text}
-      </div>
-    </div>
+      <CardHeader className="pb-2">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="text-lg font-semibold leading-tight">
+              {certificate.course}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Issued by {certificate.issued_by}
+            </p>
+          </div>
+
+          <Badge
+            className="h-fit"
+          >
+            {status.text}
+          </Badge>
+        </div>
+      </CardHeader>
+    </Card>
   );
-};
+}
 
 const CertificateModal = ({
   certificate,
@@ -254,7 +273,7 @@ export default function MyCertificatesPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {certificates.map((cert) => (<CertificateBar key={cert._id} certificate={cert} onClick={() => setSelectedCertificate(cert)} />))}
+            {certificates.map((cert) => (<CertificateCard key={cert._id} certificate={cert} onClick={() => setSelectedCertificate(cert)} />))}
           </div>
         )}
       </div>

@@ -3,7 +3,7 @@
 import useSWR from "swr"
 import { useMemo, useState, useEffect } from "react"
 import { Filters, type NetworkFiltersState } from "@/components/network/filters"
-import { UserCard } from "@/components/network/user-card"
+import { UserListItem } from "@/components/network/user-card"
 import { ProfileSheet } from "@/components/network/profile-sheet"
 import { MessageDialog } from "@/components/network/message"
 import { cn } from "@/lib/utils"
@@ -94,12 +94,13 @@ export default function NetworkPage() {
             <Loader2 className="h-8 w-8 animate-spin" />
           </div>
         ) : (
-          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-6 flex flex-col gap-4">
             {filtered.map((u) => (
-              <UserCard
+              <UserListItem
                 key={u._id}
                 user={u}
                 onMessage={() => setChatUser(u)}
+                token={token}
               />
             ))}
             {filtered.length === 0 && !isLoading && (

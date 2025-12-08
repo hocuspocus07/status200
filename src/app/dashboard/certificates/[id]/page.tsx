@@ -2,14 +2,15 @@
 
 import { CertificatePreview } from "@/components/credentials/certificate-preview";
 import { Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react"; 
 
 export default function CertificatePage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>; 
 }) {
-  const id = params.id;
+  const { id } = use(params);
+  
   const [certificate, setCertificate] = useState<any>(null);
 
   useEffect(() => {
@@ -28,7 +29,8 @@ export default function CertificatePage({
     fetchCert();
   }, [id]);
 
-  if (!certificate) return (
+  if (!certificate)
+    return (
       <div className="flex items-center justify-center min-h-screen text-lg text-muted-foreground">
         <Loader2 className="h-8 w-8 animate-spin mr-2" />
         Loading...
