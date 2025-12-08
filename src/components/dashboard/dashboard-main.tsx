@@ -232,7 +232,7 @@ export function DashboardMain() {
 
         {/* Recommendation AI Box */}
         <Card
-          className="animate-slide-in-right h-[350px] flex flex-col"
+          className="animate-slide-in-right h-full flex flex-col"
           style={{ animationDelay: "400ms" }}
         >
           <CardHeader className="pb-3">
@@ -261,32 +261,30 @@ export function DashboardMain() {
             </Button>
 
             {/* Results */}
-            <div className="flex-1 overflow-y-auto border rounded-md p-3 bg-muted/20">
+            <div className="flex-1 border rounded-md p-3 bg-muted/20">
               {recommendations ? (
-                <div className="space-y-3 pb-2">
-                  <h4 className="font-semibold text-sm">Recommended Pathway:</h4>
+                <div className="space-y-1 pb-2 h-full">
+                  <h4 className="font-semibold text-sm">Recommended courses:</h4>
 
                   <p className="text-xs text-muted-foreground">
                     Start Level: {recommendations.start_level}
                   </p>
 
-                  <div className="space-y-2">
-                    {recommendations.pathway?.map(
-                      (p: any, idx: number) => (
-                        <div
-                          key={idx}
-                          className="p-2 border rounded-md bg-background shadow-sm"
-                        >
-                          <p className="text-sm font-medium">{p.courseName}</p>
-                          <p className="text-xs text-muted-foreground">
-                            NSQF Level: {p.NSQFLevel}
-                          </p>
-                          <p className="text-xs text-muted-foreground line-clamp-2">
-                            {p.syllabusCovered}
-                          </p>
-                        </div>
-                      )
-                    )}
+                  <div className="space-y-2 max-h-32 overflow-y-auto pr-1">
+                    {recommendations.pathway?.map((p: any, idx: number) => (
+                      <div
+                        key={idx}
+                        className="p-2 border rounded-md bg-background shadow-sm"
+                      >
+                        <p className="text-sm font-medium">{p.courseName}</p>
+                        <p className="text-xs text-muted-foreground">
+                          NSQF Level: {p.NSQFLevel}
+                        </p>
+                        <p className="text-xs text-muted-foreground line-clamp-2">
+                          {p.syllabusCovered}
+                        </p>
+                      </div>
+                    ))}
                   </div>
                 </div>
               ) : (
@@ -295,6 +293,7 @@ export function DashboardMain() {
                 </p>
               )}
             </div>
+
           </CardContent>
         </Card>
       </div>
