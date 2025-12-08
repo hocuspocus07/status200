@@ -80,7 +80,7 @@ export function CertificateCard({
               {certificate.course}
             </CardTitle>
             <CardDescription className="text-sm">
-              Issued by   **{certificate.issued_by}**
+              Issued by {certificate.issued_by}
             </CardDescription>
           </div>
 
@@ -119,8 +119,7 @@ const CertificateModal = ({
   // Modal content width increased from max-w-4xl to max-w-6xl for better spacing.
   return (
     <Dialog open={!!certificate} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col p-0">
-        {/* Modal Header */}
+      <DialogContent className="sm:max-w-4xl w-full max-h-[90vh] flex flex-col p-0">        {/* Modal Header */}
         <DialogHeader className="p-6 pb-4 border-b">
           <DialogTitle className="text-2xl font-bold">{certificate.course}</DialogTitle>
           <DialogDescription>Certificate record and potential career paths.</DialogDescription>
@@ -211,7 +210,7 @@ const CertificateModal = ({
               <div className="space-y-4">
                 {/* Current Level Indicator */}
                 <div className="p-3 bg-secondary/30 rounded-lg border border-secondary text-sm text-secondary-foreground">
-                  <span className="font-semibold">Starting Point:</span> Your current certificate aligns with NSQF Level   **{pathwayData.start_level}**.
+                  <span className="font-semibold">Starting Point:</span> Your current certificate aligns with NSQF Level     {pathwayData.start_level}  .
                 </div>
 
                 {/* Pathway Cards */}
@@ -234,7 +233,7 @@ const CertificateModal = ({
                         </div>
                       </CardHeader>
                       <CardContent className="text-sm text-muted-foreground leading-relaxed pt-0">
-                        **Focus:**   {path.syllabusCovered}
+                        Focus:     {path.syllabusCovered}
                       </CardContent>
                     </Card>
                   ))}
@@ -338,7 +337,7 @@ export default function MyCertificatesPage() {
 
   return (
     <div className="min-h-screen p-4 sm:p-6 bg-background">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-6xl mx-auto">
         <h1 className="text-3xl font-bold mb-6 text-foreground">My Credentials</h1>
         {certificates.length === 0 ? (
           <div className="text-center py-10 border border-dashed border-border rounded-lg bg-card shadow-sm">
