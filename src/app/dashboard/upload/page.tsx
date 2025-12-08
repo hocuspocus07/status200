@@ -423,33 +423,6 @@ export default function VerifyPage() {
             </CardContent>
           </Card>
         </div>
-
-        <div className="mt-12">
-          <h2 className="text-2xl font-semibold tracking-tight text-foreground">Recent Submissions</h2>
-          <div className="mt-4">
-            {isLoading ? (<p className="text-muted-foreground">Loading submissions...</p>)
-              : certificates.length === 0 ? (<p className="text-muted-foreground">No submissions yet.</p>)
-                : (
-                  <div className="space-y-4">
-                    {certificates.map((cert) => (
-                      <Card key={cert._id} className="transition-all hover:shadow-sm">
-                        <CardContent className="p-4 flex items-center justify-between">
-                          <div>
-                            <p className="font-semibold text-foreground">{cert.course}</p>
-                            <p className="text-sm text-muted-foreground">
-                              To: {cert.issued_to} | Submitted: {new Date(cert.createdAt).toLocaleDateString()}
-                            </p>
-                          </div>
-                          <div className={`px-3 py-1 text-xs font-medium rounded-full ${cert.is_verified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                            {cert.is_verified ? 'Verified' : 'Pending'}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-          </div>
-        </div>
       </main>
       <DigilockerPopup
         open={digilockerOpen}
