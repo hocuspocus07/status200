@@ -15,6 +15,7 @@ cloudinary.config({
 const FORGERY_MODEL_URL = process.env.NEXT_PUBLIC_FORGERY_MODEL || "http://localhost:5000";
 const NSQF_MODEL_URL = process.env.NEXT_PUBLIC_NSQF_MODEL || "http://localhost:4500";
 // const CRAWLER_URL = process.env.NEXT_PUBLIC_CRAWLER_SERVICE || "http://localhost:9900";
+const LINK_VERIFY_URL = process.env.NEXT_PUBLIC_LINK_VERIFY_SERVICE || "http://localhost:2500";
 
 // interface claimsVerifiedResult {
 // are_claims_verified: boolean;
@@ -165,10 +166,15 @@ export async function POST(req: NextRequest) {
     const imageFormData = new FormData();
     imageFormData.append("file", certificateFile);
 
+    const linkFormData = new FormData();
+    linkFormData.append("link", verification_link);
+    linkFormData.append("certificate", certificateFile);
+
     // 2. Call Cloudinary and both ML models concurrently
     const [
       uploadResult,
       verificationResult,
+      linkVerifyResult,
       // claimsVerified
     ] = await Promise.all([
       uploadToCloudinary(certificateFile),
@@ -182,12 +188,21 @@ export async function POST(req: NextRequest) {
         }).then(res => res.json())
         : Promise.resolve({ analysis: { decision: { is_suspicious: false } } }),
 
+      certif_medium === "upload"
+        ? fetch(`${LINK_VERIFY_URL}/validate`, {
+          method: "POST",
+          body: linkFormData,
+        }).then(res => res.json())
+        : Promise.resolve({ match: true, score: 1.0 }),
+
       // fetch actual course data from crawler service
       // analyzeClaims(course, issued_by, syllabus, outcomes),
     ]);
     console.log("[debug]: Verification Result:", verificationResult);
     console.log("[debug]: model analysis result:", analysisResult);
     // console.log("[debug]: Claims Verified Result:", claimsVerified);
+    console.log("[debug]: Link Verify Result:", linkVerifyResult);
+
 
     // 3. Consolidate all data for MongoDB
     const newCertificateData = {
@@ -197,8 +212,8 @@ export async function POST(req: NextRequest) {
       passed_at,
       verification_link,
       bucket_image_url: uploadResult.secure_url,
-      // is_verified: !verificationResult.analysis.decision.is_suspicious && claimsVerified.are_claims_verified,
-      is_verified: !verificationResult.analysis.decision.is_suspicious,
+      // is_verified: linkVerifyResult.match || !verificationResult.analysis.decision.is_suspicious && claimsVerified.are_claims_verified,
+      is_verified: linkVerifyResult.match || !verificationResult.analysis.decision.is_suspicious,
       nsqf_level: analysisResult.nsqf_level,
       confidence: analysisResult.confidence,
       tags: analysisResult.tags,
