@@ -1,24 +1,26 @@
-// /app/api/jobs/route.ts
 import { NextRequest, NextResponse } from "next/server";
+import mongoose from "mongoose";
 import dbConnect from "@/lib/dbConnect";
 import Job from "@/models/jobs";
 import { getUserFromToken } from "@/lib/getUserFromToken";
 
 export async function GET(req: NextRequest) {
+  // AL AYAAN ANSARI | Roll NO. 23BCS034
   await dbConnect();
   try {
     const url = new URL(req.url);
-    const q = url.searchParams.get("q") || ""; // text search (title/company/description)
+    const q = url.searchParams.get("q") || ""; 
     const location = url.searchParams.get("location") || "";
     const jobType = url.searchParams.get("jobType") || "";
-    const remote = url.searchParams.get("remote"); // "true"/"false" or null
+    const remote = url.searchParams.get("remote"); 
+    let postedBy = url.searchParams.get("postedBy"); // We will modify this if it is 'me'
+    
     const page = parseInt(url.searchParams.get("page") || "1", 10);
     const limit = Math.min(parseInt(url.searchParams.get("limit") || "10", 10), 100);
 
     const filter: any = {};
 
     if (q) {
-      // basic case-insensitive partial search across title/company/description
       const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
       filter.$or = [
         { title: { $regex: re } },
@@ -31,6 +33,25 @@ export async function GET(req: NextRequest) {
     if (jobType) filter.jobType = jobType;
     if (remote === "true") filter.remote = true;
     if (remote === "false") filter.remote = false;
+    
+    // --- FIX: HANDLE 'me' TO USE TOKEN ---
+    if (postedBy === "me") {
+      const user = await getUserFromToken(req);
+      if (user) {
+        postedBy = user.id; // Resolve 'me' to the actual User ID from token
+      } else {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+    }
+
+    // Validate and Apply Filter
+    if (postedBy && postedBy !== "undefined") {
+      if (mongoose.Types.ObjectId.isValid(postedBy)) {
+        filter.employerId = postedBy; 
+      } else {
+        return NextResponse.json({ total: 0, page, limit, jobs: [] });
+      }
+    }
 
     const total = await Job.countDocuments(filter);
     const jobs = await Job.find(filter)
@@ -46,12 +67,12 @@ export async function GET(req: NextRequest) {
   }
 }
 
+// POST function remains unchanged...
 export async function POST(req: NextRequest) {
   await dbConnect();
   const user = await getUserFromToken(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  console.log(user);
-  console.log(user.isEmployee);
+  
   if (!user.isEmployee) return NextResponse.json({ error: "Forbidden: employers only" }, { status: 403 });
 
   try {
@@ -83,7 +104,7 @@ export async function POST(req: NextRequest) {
       requirements,
       salaryRange: { min: salaryMin, max: salaryMax },
       remote: Boolean(remote),
-      extras, // optional freeform object for custom fields (if your schema allows)
+      extras, 
     });
 
     return NextResponse.json({ job }, { status: 201 });

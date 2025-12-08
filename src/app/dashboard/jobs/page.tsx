@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import Link from "next/link"
 import { Loader2, Briefcase, MapPin, Search } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+
+// AL AYAAN ANSARI | Roll NO. 23BCS034
 
 type Job = {
   _id: string
@@ -68,6 +70,31 @@ export default function JobsBrowsePage() {
       setLoading(false)
     }
   }
+
+  const { sortedJobs, latestJobIds } = useMemo(() => {
+    if (!jobs.length) return { sortedJobs: [], latestJobIds: new Set() }
+
+    // 1. Sort by createdAt Descending (Newest first)
+    // FIX: Changed from dateA - dateB to dateB - dateA
+    const sorted = [...jobs].sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0
+      return dateB - dateA // Descending order
+    })
+
+    // 2. Identify the top 3 latest jobs (Newest first)
+    // This remains the same to identify which ones get the "New" badge
+    const latest = [...jobs]
+      .sort((a, b) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0
+        return dateB - dateA // Descending order
+      })
+      .slice(0, 3)
+      .map((job) => job._id)
+
+    return { sortedJobs: sorted, latestJobIds: new Set(latest) }
+  }, [jobs])
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -159,7 +186,7 @@ export default function JobsBrowsePage() {
             <div className="flex justify-center py-20">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
-          ) : jobs.length === 0 ? (
+          ) : sortedJobs.length === 0 ? (
             <Card className="border-dashed">
               <CardHeader>
                 <CardTitle>No jobs match the filters</CardTitle>
@@ -167,65 +194,74 @@ export default function JobsBrowsePage() {
               </CardHeader>
             </Card>
           ) : (
-            jobs.map((job) => (
-              <Card key={job._id} className="hover:border-primary/60 transition-colors">
-                <CardHeader className="space-y-1">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <CardTitle className="text-xl">{job.title}</CardTitle>
-                      <CardDescription className="flex flex-wrap items-center gap-2">
-                        <span className="font-medium text-foreground">{job.company}</span>
-                        <span className="flex items-center gap-1 text-muted-foreground text-sm">
-                          <MapPin className="h-4 w-4" />
-                          {job.location}
-                        </span>
-                      </CardDescription>
+            sortedJobs.map((job) => {
+              const isNew = latestJobIds.has(job._id)
+              return (
+                <Card key={job._id} className="hover:border-primary/60 transition-colors">
+                  <CardHeader className="space-y-1">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <CardTitle className="text-xl">{job.title}</CardTitle>
+                          {isNew && (
+                            <Badge className="bg-emerald-600 hover:bg-emerald-700 animate-in fade-in zoom-in duration-300">
+                              New
+                            </Badge>
+                          )}
+                        </div>
+                        <CardDescription className="flex flex-wrap items-center gap-2 mt-1">
+                          <span className="font-medium text-foreground">{job.company}</span>
+                          <span className="flex items-center gap-1 text-muted-foreground text-sm">
+                            <MapPin className="h-4 w-4" />
+                            {job.location}
+                          </span>
+                        </CardDescription>
+                      </div>
+                      <Badge variant="secondary">{job.jobType}</Badge>
                     </div>
-                    <Badge variant="secondary">{job.jobType}</Badge>
-                  </div>
-                  <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                    {job.remote && <Badge variant="outline">Remote friendly</Badge>}
-                    {job.salaryRange?.min && (
-                      <span>
-                        Salary: ${job.salaryRange.min.toLocaleString()}{" "}
-                        {job.salaryRange?.max ? `- $${job.salaryRange.max.toLocaleString()}` : "+"}
-                      </span>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <p className="text-sm text-muted-foreground line-clamp-3">{job.description}</p>
-
-                  {job.requirements && job.requirements.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {job.requirements.slice(0, 4).map((req) => (
-                        <Badge key={req} variant="outline" className="text-xs">
-                          {req}
-                        </Badge>
-                      ))}
-                      {job.requirements.length > 4 && (
-                        <span className="text-xs text-muted-foreground">
-                          +{job.requirements.length - 4} more
+                    <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                      {job.remote && <Badge variant="outline">Remote friendly</Badge>}
+                      {job.salaryRange?.min && (
+                        <span>
+                          Salary: ${job.salaryRange.min.toLocaleString()}{" "}
+                          {job.salaryRange?.max ? `- $${job.salaryRange.max.toLocaleString()}` : "+"}
                         </span>
                       )}
                     </div>
-                  )}
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <p className="text-sm text-muted-foreground line-clamp-3">{job.description}</p>
 
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <p className="text-xs text-muted-foreground">
-                      Posted {job.createdAt ? new Date(job.createdAt).toLocaleDateString() : "recently"}
-                    </p>
-                    <Button asChild>
-                      <Link href={`/dashboard/jobs/${job._id}`}>View & Apply</Link>
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
+                    {job.requirements && job.requirements.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {job.requirements.slice(0, 4).map((req) => (
+                          <Badge key={req} variant="outline" className="text-xs">
+                            {req}
+                          </Badge>
+                        ))}
+                        {job.requirements.length > 4 && (
+                          <span className="text-xs text-muted-foreground">
+                            +{job.requirements.length - 4} more
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <p className="text-xs text-muted-foreground">
+                        Posted {job.createdAt ? new Date(job.createdAt).toLocaleDateString() : "recently"}
+                      </p>
+                      <Button asChild>
+                        <Link href={`/dashboard/jobs/${job._id}`}>View & Apply</Link>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })
           )}
         </section>
       </div>
     </main>
   )
 }
-
