@@ -31,6 +31,7 @@ export async function GET(req: NextRequest) {
         profile: user.profile,
         socials: user.socials,
         isEmployee: user.isEmployee ?? false,
+        certificates:user.certificates,
       },
     });
 
