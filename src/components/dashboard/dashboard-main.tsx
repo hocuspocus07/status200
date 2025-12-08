@@ -18,6 +18,7 @@ import {
   ExternalLink,
   Clock,
   Brain,
+  FileUser,
 } from "lucide-react"
 
 const stats = [
@@ -26,10 +27,10 @@ const stats = [
     value: "24",
     change: "+3 this month",
     icon: Award,
-    color: "text-blue-600",
+    color: "text-green-600",
   },
   {
-    title: "Skill Score",
+    title: "NSQF Score",
     value: "87%",
     change: "+5% from last month",
     icon: TrendingUp,
@@ -40,14 +41,14 @@ const stats = [
     value: "156",
     change: "+12 new connections",
     icon: Users,
-    color: "text-purple-600",
+    color: "text-green-600",
   },
   {
     title: "Number of Jobs applied",
     value: "15",
     change: "+4 new applications",
-    icon: Users,
-    color: "text-purple-600",
+    icon: FileUser,
+    color: "text-green-600",
   },
 ]
 
@@ -152,7 +153,7 @@ export function DashboardMain() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         {stats.map((stat, index) => (
           <Card
             key={stat.title}
@@ -235,21 +236,17 @@ export function DashboardMain() {
           className="animate-slide-in-right h-full flex flex-col"
           style={{ animationDelay: "400ms" }}
         >
-          <CardHeader className="pb-3">
+          <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base md:text-lg">
               <Brain className="h-5 w-5" />
               AI Recommendations for courses
             </CardTitle>
-            <CardDescription className="text-xs md:text-sm">
-              Enter your skills and experience to get personalized pathway
-              recommendations
-            </CardDescription>
           </CardHeader>
 
           <CardContent className="flex flex-col gap-3 flex-1">
             {/* Input */}
             <textarea
-              className="w-full p-3 border rounded-md text-sm resize-none h-[70px]"
+              className="w-full p-3 border rounded-md text-sm resize-none h-[40px]"
               placeholder="Enter your skills and experience..."
               value={skillInput}
               onChange={(e) => setSkillInput(e.target.value)}
@@ -261,7 +258,7 @@ export function DashboardMain() {
             </Button>
 
             {/* Results */}
-            <div className="flex-1 border rounded-md p-3 bg-muted/20">
+            <div className="flex-1 border rounded-md p-3">
               {recommendations ? (
                 <div className="space-y-1 pb-2 h-full">
                   <h4 className="font-semibold text-sm">Recommended courses:</h4>
@@ -270,11 +267,11 @@ export function DashboardMain() {
                     Start Level: {recommendations.start_level}
                   </p>
 
-                  <div className="space-y-2 max-h-32 overflow-y-auto pr-1">
+                  <div className="space-y-2 h-full overflow-y-auto pr-1">
                     {recommendations.pathway?.map((p: any, idx: number) => (
                       <div
                         key={idx}
-                        className="p-2 border rounded-md bg-background shadow-sm"
+                        className="p-2 border rounded-md shadow-sm"
                       >
                         <p className="text-sm font-medium">{p.courseName}</p>
                         <p className="text-xs text-muted-foreground">
