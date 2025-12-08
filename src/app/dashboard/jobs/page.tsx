@@ -123,7 +123,7 @@ export default function JobsBrowsePage() {
             <Briefcase className="h-6 w-6" />
             <p className="text-sm font-medium uppercase tracking-wide">Opportunities</p>
           </div>
-          <h1 className="text-2xl md:text-3xl font-semibold">Jobs curated for you</h1>
+          <h1 className="text-2xl md:text-3xl font-semibold">Find Your Dream Job Now</h1>
           <p className="text-sm text-muted-foreground">
             Discover open roles from verified employers on Certi-fi and apply directly with your profile.
           </p>
@@ -139,7 +139,7 @@ export default function JobsBrowsePage() {
             <form className="space-y-4" onSubmit={handleSubmit}>
               <div className="flex flex-col gap-3 md:flex-row">
                 <div className="flex-1 flex items-center gap-2 rounded-md border px-3 py-2">
-                  <Search className="h-4 w-4 text-muted-foreground" />
+                  <Search className="h-4 w-4" />
                   <Input
                     className="border-0 focus-visible:ring-0 px-0"
                     placeholder="Search title, company, or keywords"
@@ -211,7 +211,7 @@ export default function JobsBrowsePage() {
                         </div>
                         <CardDescription className="flex flex-wrap items-center gap-2 mt-1">
                           <span className="font-medium text-foreground">{job.company}</span>
-                          <span className="flex items-center gap-1 text-muted-foreground text-sm">
+                          <span className="flex items-center gap-1 text-sm">
                             <MapPin className="h-4 w-4" />
                             {job.location}
                           </span>
@@ -219,7 +219,7 @@ export default function JobsBrowsePage() {
                       </div>
                       <Badge variant="secondary">{job.jobType}</Badge>
                     </div>
-                    <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                    <div className="flex flex-wrap gap-2 text-xs">
                       {job.remote && <Badge variant="outline">Remote friendly</Badge>}
                       {job.salaryRange?.min && (
                         <span>
@@ -230,7 +230,7 @@ export default function JobsBrowsePage() {
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <p className="text-sm text-muted-foreground line-clamp-3">{job.description}</p>
+                    <p className="text-sm line-clamp-3">{job.description}</p>
 
                     {job.requirements && job.requirements.length > 0 && (
                       <div className="flex flex-wrap gap-2">
@@ -240,7 +240,7 @@ export default function JobsBrowsePage() {
                           </Badge>
                         ))}
                         {job.requirements.length > 4 && (
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-xs">
                             +{job.requirements.length - 4} more
                           </span>
                         )}
@@ -248,7 +248,7 @@ export default function JobsBrowsePage() {
                     )}
 
                     <div className="flex flex-wrap items-center justify-between gap-3">
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs">
                         Posted {job.createdAt ? new Date(job.createdAt).toLocaleDateString() : "recently"}
                       </p>
                       <Button asChild>

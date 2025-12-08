@@ -11,15 +11,20 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useState } from "react"
+import { useState, useRef } from "react" // Import useRef
 import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
+import ReCAPTCHA from "react-google-recaptcha" // Import ReCAPTCHA
 
 export function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
   const [formData, setFormData] = useState({ email: "", password: "" })
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
+  
+  // CAPTCHA STATE
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null)
+  const recaptchaRef = useRef<ReCAPTCHA>(null)
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target
@@ -32,7 +37,33 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
     setError("")
     setSuccess("")
 
+    // 1. Check if Captcha is solved on client
+    if (!captchaToken) {
+      setError("Please complete the captcha")
+      toast.error("Please complete the captcha")
+      setIsLoading(false)
+      return
+    }
+
     try {
+      // 2. Verify Captcha with Backend
+      const captchaRes = await fetch("/api/verify-captcha", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: captchaToken }),
+      })
+
+      const captchaData = await captchaRes.json()
+
+      if (!captchaRes.ok || !captchaData.success) {
+        setError("Captcha verification failed. Please try again.")
+        recaptchaRef.current?.reset()
+        setCaptchaToken(null)
+        setIsLoading(false)
+        return
+      }
+
+      // 3. If Captcha is valid, proceed with Login
       const response = await fetch("/api/users/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -43,16 +74,19 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
 
       if (!response.ok) {
         setError(data.error || "Login failed")
+        // Optional: Reset captcha on bad password to prevent brute force
+        recaptchaRef.current?.reset()
+        setCaptchaToken(null)
       } else {
         setSuccess("Login successful!")
-        toast.success("Login successful!");
-        localStorage.setItem("token", data.token);
-        window.location.href = "/dashboard";
+        toast.success("Login successful!")
+        localStorage.setItem("token", data.token)
+        window.location.href = "/dashboard"
       }
     } catch (err) {
       console.error(err)
       setError("Unexpected error occurred")
-      toast.error("Unexpected error occurred");
+      toast.error("Unexpected error occurred")
     } finally {
       setIsLoading(false)
     }
@@ -92,10 +126,19 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
               />
             </div>
 
+            {/* CAPTCHA COMPONENT */}
+            <div className="flex justify-center py-2">
+              <ReCAPTCHA
+                ref={recaptchaRef}
+                sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
+                onChange={(token) => setCaptchaToken(token)}
+              />
+            </div>
+
             {error && <p className="text-red-500 text-sm">{error}</p>}
             {success && <p className="text-green-500 text-sm">{success}</p>}
 
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button type="submit" className="w-full" disabled={isLoading || !captchaToken}>
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

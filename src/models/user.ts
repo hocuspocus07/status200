@@ -40,7 +40,7 @@ const UserSchema = new Schema<IUser>(
     password_hash: { type: String, required: true },
     uuid: { type: String, required: true, unique: true },
     learnerIdHash: { type: String, required: true, unique: true },
-    isPublic: { type: Boolean, default: true },
+    isPublic: { type: Boolean, default: false },
 
     // ✅ NEW: Employee flag
     isEmployee: { type: Boolean, default: false },

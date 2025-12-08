@@ -9,10 +9,9 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Calendar, GraduationCap, MapPin, AtSign, LinkIcon, Award, Plus, Pencil, Briefcase, Mail, LogOut, Loader2, X, Sparkles } from "lucide-react" // Added X and Sparkles
+import { Calendar, GraduationCap, MapPin, AtSign, LinkIcon, Award, Plus, Pencil, Briefcase, Mail, LogOut, Loader2, X, Sparkles, Lock, Unlock } from "lucide-react"
 import { toast } from "sonner"
 import { Switch } from "@/components/ui/switch"
-import { Lock, Unlock } from "lucide-react"
 
 type Education = {
   _id: string
@@ -319,7 +318,7 @@ export default function DashboardProfile() {
   }
 
   return (
-    <div className="space-y-4 md:space-y-6 animate-fade-in-up">
+    <div className="space-y-4 md:space-y-6 animate-fade-in-up p-6">
       {/* Profile Header */}
       <Card className="animate-slide-in-left" style={{ animationDelay: "80ms" }}>
         <CardContent className="p-4 md:p-6">
@@ -332,18 +331,18 @@ export default function DashboardProfile() {
                 </Avatar>
                 <div className="space-y-1 flex-1 min-w-0">
                   <h2 className="text-lg md:text-xl font-bold text-foreground">{user?.name} {isEmployee && (
-  <span
-    className="px-4 text-[10px] md:text-xs 
+                    <span
+                      className="px-4 text-[10px] md:text-xs 
                text-yellow-400 bg-neutral-900 
                border border-yellow-400 
                rounded-md shadow-sm"
-  >
-    Employee
-  </span>
-)}</h2>
-                  
-                  <p className="text-sm text-muted-foreground line-clamp-1">{headline}</p>
-                  <div className="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center gap-2 sm:gap-3 text-xs md:text-sm text-muted-foreground">
+                    >
+                      Employee
+                    </span>
+                  )}</h2>
+
+                  <p className="text-sm  line-clamp-1">{headline}</p>
+                  <div className="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center gap-2 sm:gap-3 text-xs md:text-sm  ">
                     {location && (
                       <span className="inline-flex items-center gap-1">
                         <MapPin className="h-3 w-3 md:h-4 md:w-4" /> {location}
@@ -420,7 +419,7 @@ export default function DashboardProfile() {
 
           {/* About */}
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-1">
               <CardTitle className="text-base md:text-lg">About</CardTitle>
               {!isEditing && (
                 <CardDescription className="text-xs md:text-sm">
@@ -438,7 +437,7 @@ export default function DashboardProfile() {
                   placeholder="Write something about your goals, interests, and achievements."
                 />
               ) : (
-                <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                <p className="text-sm   whitespace-pre-wrap">
                   {bio || "No bio added yet. Click 'Edit Profile' to add one."}
                 </p>
               )}
@@ -446,23 +445,40 @@ export default function DashboardProfile() {
               {/* Grid for Headline, Location, Website (only in edit mode) */}
               {isEditing && (
                 <div className="grid gap-4 sm:grid-cols-2 pt-4">
-                  <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm sm:col-span-2">
-                    <div className="space-y-0.5">
-                      <Label htmlFor="isPublic" className="text-sm font-medium">
-                        Public Profile
-                      </Label>
-                      <CardDescription className="text-xs">
-                        {isPublic
-                          ? "Your certificates will be visible to others."
-                          : "Only your connections can view your certificates."}
-                      </CardDescription>
+                  {/* --- GDPR COMPLIANT TOGGLE SECTION --- */}
+                  <div className="flex flex-col gap-3 rounded-lg border p-3 shadow-sm sm:col-span-2 bg-card">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="isPublic" className="text-sm font-medium">
+                          Public Profile
+                        </Label>
+                        <CardDescription className="text-xs">
+                          {isPublic
+                            ? "Your certificates will be visible to others."
+                            : "Only your connections can view your certificates."}
+                        </CardDescription>
+                      </div>
+                      <Switch
+                        id="isPublic"
+                        checked={isPublic}
+                        onCheckedChange={setIsPublic}
+                      />
                     </div>
-                    <Switch
-                      id="isPublic"
-                      checked={isPublic}
-                      onCheckedChange={setIsPublic}
-                    />
+                    
+                    {/* GDPR Legal Text */}
+                    <div className="rounded-md bg-muted/50 p-3 text-xs   border border-muted">
+                      <p className="font-semibold mb-1 text-foreground/80">GDPR Consent Declaration:</p>
+                      <p>
+                        By toggling this setting to <strong>Public</strong>, you provide 
+                        <span className="italic"> explicit consent</span> for Certi-fi to display your 
+                        professional data to registered third-party verifiers. 
+                        You reserve the <strong>Right to Withdraw Consent</strong> at any time 
+                        by switching this toggle back to <strong>Private</strong>.
+                      </p>
+                    </div>
                   </div>
+                  {/* --- END GDPR SECTION --- */}
+
                   <div className="space-y-2">
                     <Label htmlFor="headline" className="text-xs md:text-sm">Headline</Label>
                     <Input id="headline" value={headline} onChange={(e) => setHeadline(e.target.value)} className="text-sm" />
@@ -569,7 +585,7 @@ export default function DashboardProfile() {
                           <h4 className="font-medium text-sm md:text-base line-clamp-2">{ed.degree}{ed.field ? ` — ${ed.field}` : ""}</h4>
                           <Badge variant="outline" className="text-xs">{ed.institution}</Badge>
                         </div>
-                        <p className="text-xs md:text-sm text-muted-foreground flex items-center gap-2 mt-1">
+                        <p className="text-xs md:text-sm   flex items-center gap-2 mt-1">
                           <Calendar className="h-3 w-3 md:h-4 md:w-4" />
                           {ed.start} — {ed.current ? "Present" : ed.end || "—"}
                         </p>
@@ -594,7 +610,7 @@ export default function DashboardProfile() {
                   </div>
                 ))
               ) : (
-                <div className="text-xs md:text-sm text-muted-foreground">No education added yet.</div>
+                <div className="text-xs md:text-sm  ">No education added yet.</div>
               )}
             </CardContent>
           </Card>
@@ -622,8 +638,8 @@ export default function DashboardProfile() {
                           {c.status}
                         </Badge>
                       </div>
-                      <p className="text-xs md:text-sm text-muted-foreground line-clamp-1">{c.provider}</p>
-                      <p className="text-xs text-muted-foreground">Issued {new Date(c.issueDate).toLocaleDateString()}</p>
+                      <p className="text-xs md:text-sm   line-clamp-1">{c.provider}</p>
+                      <p className="text-xs  ">Issued {new Date(c.issueDate).toLocaleDateString()}</p>
                     </div>
                     <Button variant="ghost" size="sm" className="text-xs shrink-0">
                       View
@@ -631,7 +647,7 @@ export default function DashboardProfile() {
                   </div>
                 ))
               ) : (
-                <div className="text-xs md:text-sm text-muted-foreground">No certificates added yet.</div>
+                <div className="text-xs md:text-sm  ">No certificates added yet.</div>
               )}
               <Button className="w-full bg-transparent text-xs md:text-sm" variant="outline">
                 Manage All
@@ -650,12 +666,12 @@ export default function DashboardProfile() {
               <CardDescription className="text-xs md:text-sm">Ways to reach you</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="text-xs md:text-sm flex items-center gap-2 text-muted-foreground">
+              <div className="text-xs md:text-sm flex items-center gap-2  ">
                 <Mail className="h-3 w-3 md:h-4 md:w-4 shrink-0" />
                 <span className="truncate">{user?.email}</span>
               </div>
               {website && (
-                <div className="text-xs md:text-sm flex items-center gap-2 text-muted-foreground">
+                <div className="text-xs md:text-sm flex items-center gap-2  ">
                   <LinkIcon className="h-3 w-3 md:h-4 md:w-4 shrink-0" />
                   <a href={website} target="_blank" rel="noreferrer" className="hover:underline truncate">
                     {website}
@@ -663,13 +679,13 @@ export default function DashboardProfile() {
                 </div>
               )}
               {location && (
-                <div className="text-xs md:text-sm flex items-center gap-2 text-muted-foreground">
+                <div className="text-xs md:text-sm flex items-center gap-2  ">
                   <MapPin className="h-3 w-3 md:h-4 md:w-4 shrink-0" />
                   <span className="truncate">{location}</span>
                 </div>
               )}
               {(!location && !website) && (
-                <div className="text-xs md:text-sm text-muted-foreground">No contact info added.</div>
+                <div className="text-xs md:text-sm  ">No contact info added.</div>
               )}
             </CardContent>
           </Card>
@@ -719,7 +735,7 @@ export default function DashboardProfile() {
                     )}
                   </Badge>
                 )) : (
-                  <p className="text-sm text-muted-foreground">No skills added yet.</p>
+                  <p className="text-sm  ">No skills added yet.</p>
                 )}
               </div>
             </CardContent>
