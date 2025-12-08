@@ -40,7 +40,7 @@ const getStatusProps = (cert: Certificate) => {
     return { text: 'Verified', className: 'bg-green-800 text-green-200' };
   }
   if (cert.reasons_for_failure && cert.reasons_for_failure.length > 0) {
-    return { text: 'Pending', className: 'bg-yellow-800 text-yellow-200' };
+    return { text: 'Failed', className: 'bg-red-800 text-red-200' };
   }
   return { text: 'Failed', className: 'bg-red-800 text-red-200' };
 };

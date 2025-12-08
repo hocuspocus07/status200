@@ -2,14 +2,16 @@
 
 import { CertificatePreview } from "@/components/credentials/certificate-preview";
 import { Loader2 } from "lucide-react";
-import { useEffect, useState, use } from "react"; 
+
+import { useEffect, useState, use } from "react"; // 1. Import 'use'
 
 export default function CertificatePage({
   params,
 }: {
-  params: Promise<{ id: string }>; 
+
+  params: Promise<{ id: string }>; // 2. Update type to Promise
 }) {
-  const { id } = use(params);
+  const { id } = use(params); // 3. Unwrap params using use()
   
   const [certificate, setCertificate] = useState<any>(null);
 

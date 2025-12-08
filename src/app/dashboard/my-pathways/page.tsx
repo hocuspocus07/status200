@@ -43,7 +43,7 @@ const getStatusProps = (cert: Certificate) => {
     return { text: 'Verified', className: 'bg-green-800 text-green-200' };
   }
   if (cert.reasons_for_failure && cert.reasons_for_failure.length > 0) {
-    return { text: 'Pending', className: 'bg-yellow-800 text-yellow-200' };
+     return { text: 'Failed', className: 'bg-red-800 text-red-200' };
   }
   return { text: 'Failed', className: 'bg-red-800 text-red-200' };
 };
@@ -112,14 +112,6 @@ const CertificateModal = ({
               {certificate.nsqf_level && <DetailItem label="NSQF Level" value={certificate.nsqf_level} />}
               <DetailItem label="Status" value={<span className={`px-2 py-0.5 text-xs font-medium rounded-full ${status.className}`}>{status.text}</span>} />
             </dl>
-            {status.text === 'Failed' && certificate.reasons_for_failure && (
-              <div className="mt-4 p-3 bg-red-900/50 border border-red-700 rounded-md text-sm">
-                <p className="font-semibold text-red-300 mb-1">Verification Failed:</p>
-                <ul className="list-disc list-inside text-red-400">
-                  {certificate.reasons_for_failure.map((reason, index) => <li key={index}>{reason}</li>)}
-                </ul>
-              </div>
-            )}
           </div>
 
           {/* Progression Pathways Section */}
