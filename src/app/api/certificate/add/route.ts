@@ -15,6 +15,8 @@ cloudinary.config({
 const FORGERY_MODEL_URL = process.env.NEXT_PUBLIC_FORGERY_MODEL || "http://localhost:5000";
 const NSQF_MODEL_URL = process.env.NEXT_PUBLIC_NSQF_MODEL || "http://localhost:4500";
 // const CRAWLER_URL = process.env.NEXT_PUBLIC_CRAWLER_SERVICE || "http://localhost:9900";
+const LINK_VERIFY_URL = process.env.NEXT_PUBLIC_LINK_VERIFY_SERVICE || "http://localhost:2500";
+const TEMPLATE_VERFICATION_URL = process.env.NEXT_PUBLIC_TEMPLATE_VERIFICATION_SERVICE || "http://localhost:3999";
 
 // interface claimsVerifiedResult {
 // are_claims_verified: boolean;
@@ -165,13 +167,30 @@ export async function POST(req: NextRequest) {
     const imageFormData = new FormData();
     imageFormData.append("file", certificateFile);
 
+    const linkFormData = new FormData();
+    linkFormData.append("link", verification_link);
+    linkFormData.append("certificate", certificateFile);
+
+    // const templateMatchingFormData = new FormData();
+    // templateMatchingFormData.append("file", certificateFile);
+
     // 2. Call Cloudinary and both ML models concurrently
     const [
       uploadResult,
+      templateMatchingResult,
       verificationResult,
+      linkVerifyResult,
       // claimsVerified
     ] = await Promise.all([
       uploadToCloudinary(certificateFile),
+
+      // ML model 3 (port 3999): Template matching
+      certif_medium === "upload"
+        ? fetch(`${TEMPLATE_VERFICATION_URL}/check-template`, {
+          method: "POST",
+          body: imageFormData,
+        }).then(res => res.json())
+        : Promise.resolve({ is_in_templates: true, matches: [] }),
 
       // ML Model 1 (port 5000): Image verification
       // If from digilocker, skip image model and assume not suspicious
@@ -182,12 +201,24 @@ export async function POST(req: NextRequest) {
         }).then(res => res.json())
         : Promise.resolve({ analysis: { decision: { is_suspicious: false } } }),
 
+      // ML Model 2 (port 2500): Link verification
+      (verification_link && certif_medium === "upload")
+        ? fetch(`${LINK_VERIFY_URL}/validate`, {
+          method: "POST",
+          body: linkFormData,
+        }).then(res => res.json())
+        : (verification_link && certif_medium === "digilocker")
+          ? Promise.resolve({ match: true, score: 1.0 })
+          : Promise.resolve({ match: false, score: 0.0 }),
+
       // fetch actual course data from crawler service
       // analyzeClaims(course, issued_by, syllabus, outcomes),
     ]);
     console.log("[debug]: Verification Result:", verificationResult);
     console.log("[debug]: model analysis result:", analysisResult);
     // console.log("[debug]: Claims Verified Result:", claimsVerified);
+    console.log("[debug]: Link Verify Result:", linkVerifyResult);
+    console.log("[debug]: Template Matching Result:", templateMatchingResult);
 
     // 3. Consolidate all data for MongoDB
     const newCertificateData = {
@@ -197,8 +228,8 @@ export async function POST(req: NextRequest) {
       passed_at,
       verification_link,
       bucket_image_url: uploadResult.secure_url,
-      // is_verified: !verificationResult.analysis.decision.is_suspicious && claimsVerified.are_claims_verified,
-      is_verified: !verificationResult.analysis.decision.is_suspicious,
+      // is_verified: linkVerifyResult.match || !verificationResult.analysis.decision.is_suspicious && claimsVerified.are_claims_verified,
+      is_verified: linkVerifyResult.match || (templateMatchingResult.is_in_templates && !verificationResult.analysis.decision.is_suspicious),
       nsqf_level: analysisResult.nsqf_level,
       confidence: analysisResult.confidence,
       tags: analysisResult.tags,
