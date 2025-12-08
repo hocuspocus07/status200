@@ -3,8 +3,14 @@
 import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { jwtDecode } from "jwt-decode";
-import { Card,CardHeader } from "@/components/ui/card";
-import { Badge } from "lucide-react";
+import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose,DialogDescription } from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
+import { Loader2, ExternalLink } from "lucide-react";
+import { cn } from "@/lib/utils";
+
 // --- INTERFACES ---
 interface Certificate {
   _id: string;
@@ -35,14 +41,18 @@ interface DecodedToken {
 }
 
 // --- HELPER COMPONENTS ---
+
+// Helper function now uses standard Shadcn badge variants
 const getStatusProps = (cert: Certificate) => {
   if (cert.is_verified) {
-    return { text: 'Verified', className: 'bg-green-800 text-green-200' };
+    return { text: 'Verified', variant: 'default' as const };
   }
   if (cert.reasons_for_failure && cert.reasons_for_failure.length > 0) {
-    return { text: 'Failed', className: 'bg-red-800 text-red-200' };
+    // Using 'destructive' for failed verification
+    return { text: 'Failed', variant: 'destructive' as const };
   }
-  return { text: 'Failed', className: 'bg-red-800 text-red-200' };
+  // Assuming 'Pending' for cases where verification hasn't explicitly succeeded or failed yet
+  return { text: 'Pending', variant: 'secondary' as const };
 };
 
 export function CertificateCard({
@@ -57,22 +67,20 @@ export function CertificateCard({
   return (
     <Card
       onClick={onClick}
-      className="cursor-pointer transition hover:shadow-md hover:border-muted-foreground/30"
+      className="cursor-pointer transition-shadow hover:shadow-lg"
     >
-      <CardHeader className="pb-2">
-        <div className="flex items-start justify-between gap-4">
+      <CardHeader className="pb-4">
+        <div className="flex items-center justify-between gap-4">
           <div>
-            <h3 className="text-lg font-semibold leading-tight">
+            <CardTitle className="text-xl leading-tight">
               {certificate.course}
-            </h3>
-            <p className="text-sm text-muted-foreground">
+            </CardTitle>
+            <CardDescription className="text-sm">
               Issued by {certificate.issued_by}
-            </p>
+            </CardDescription>
           </div>
 
-          <Badge
-            className="h-fit"
-          >
+          <Badge variant={status.variant} className="h-fit text-xs px-3 py-1">
             {status.text}
           </Badge>
         </div>
@@ -97,82 +105,103 @@ const CertificateModal = ({
   const status = getStatusProps(certificate);
 
   const DetailItem = ({ label, value }: { label: string; value: React.ReactNode }) => (
-    <div className="flex flex-col sm:flex-row">
-      <dt className="w-full sm:w-1/3 font-medium text-gray-400">{label}</dt>
-      <dd className="w-full sm:w-2/3 text-white">{value}</dd>
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-1.5">
+      <dt className="font-medium text-muted-foreground">{label}</dt>
+      <dd className="sm:col-span-2 text-foreground break-words">{value}</dd>
     </div>
   );
 
+  // The modal is now a Shadcn Dialog
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50 p-4" onClick={onClose}>
-      <div className="bg-gray-900 border border-gray-700 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+    <Dialog open={!!certificate} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0">
         {/* Modal Header */}
-        <div className="flex justify-between items-center p-4 border-b border-gray-700 flex-shrink-0">
-          <h2 className="text-xl font-bold text-cyan-400">{certificate.course}</h2>
-          <button onClick={onClose} className="text-gray-400 text-2xl leading-none hover:text-white">&times;</button>
-        </div>
+        <DialogHeader className="p-6 pb-4 border-b">
+          <DialogTitle className="text-2xl font-bold">{certificate.course}</DialogTitle>
+          <DialogDescription>Details for the certificate issued by {certificate.issued_by}.</DialogDescription>
+        </DialogHeader>
 
-        <div className="overflow-y-auto p-6 space-y-6">
+        <div className="overflow-y-auto px-6 py-4 space-y-6">
 
-          <div>
-            <h3 className="text-lg font-semibold text-white mb-4">Certificate Details</h3>
+          {/* Certificate Image and Core Details */}
+          <section>
+            <h3 className="text-lg font-semibold mb-3">Core Information</h3>
             {certificate.bucket_image_url && (
-              <img src={certificate.bucket_image_url} alt={`Certificate for ${certificate.course}`} className="mb-6 rounded-md w-full object-contain border border-gray-700 max-h-80" />
+              <div className="mb-6 border rounded-lg overflow-hidden">
+                <img
+                  src={certificate.bucket_image_url}
+                  alt={`Certificate for ${certificate.course}`}
+                  className="w-full object-contain max-h-80"
+                />
+              </div>
             )}
-            <dl className="space-y-3 text-sm">
+            <dl className="space-y-2 text-sm">
               <DetailItem label="Recipient" value={certificate.issued_to} />
-              <DetailItem label="Issued by" value={certificate.issued_by} />
               <DetailItem label="Date Passed" value={new Date(certificate.passed_at).toLocaleDateString()} />
-              {certificate.nsqf_level && <DetailItem label="NSQF Level" value={certificate.nsqf_level} />}
-              <DetailItem label="Status" value={<span className={`px-2 py-0.5 text-xs font-medium rounded-full ${status.className}`}>{status.text}</span>} />
+              {certificate.nsqf_level && <DetailItem label="NSQF Level" value={<Badge variant="outline">{certificate.nsqf_level}</Badge>} />}
+              <DetailItem label="Verification Status" value={<Badge variant={status.variant} className="text-xs">{status.text}</Badge>} />
+              {certificate.verification_link && <DetailItem label="Official Link" value={<a href={certificate.verification_link} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">View <ExternalLink className="w-3 h-3" /></a>} />}
             </dl>
+
+            {/* Failure Reasons Block */}
             {status.text === 'Failed' && certificate.reasons_for_failure && (
-              <div className="mt-4 p-3 bg-red-900/50 border border-red-700 rounded-md text-sm">
-                <p className="font-semibold text-red-300 mb-1">Verification Failed:</p>
-                <ul className="list-disc list-inside text-red-400">
+              <div className="mt-4 p-4 border border-destructive/50 bg-destructive/10 rounded-md text-sm">
+                <p className="font-semibold text-destructive mb-2">Verification Failed Reasons:</p>
+                <ul className="list-disc list-inside text-destructive/90 space-y-0.5 ml-2">
                   {certificate.reasons_for_failure.map((reason, index) => <li key={index}>{reason}</li>)}
                 </ul>
               </div>
             )}
-          </div>
+          </section>
 
           {/* Blockchain section */}
           {certificate.blockchain_certificate_hash && (
-            <div>
-              <hr className="border-gray-700 my-6" />
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-white mb-4">Blockchain Verification</h3>
-                <button
-                  className={`w-full px-4 py-2 rounded font-medium transition-colors ${loadingChain ? "bg-gray-700 cursor-not-allowed" : "bg-white text-black hover:bg-gray-200"}`}
-                  onClick={onFetchBlockchain}
-                  disabled={loadingChain}
-                >
-                  {loadingChain ? "Verifying on Blockchain..." : "Verify on Blockchain"}
-                </button>
-                {blockchainData && (
-                  <div className="mt-4 p-4 bg-gray-800 border border-gray-600 rounded-lg space-y-2 text-xs break-words font-mono">
-                    <p><span className="font-medium text-gray-400">Certificate Hash:</span> {blockchainData.certHash}</p>
-                    <p><span className="font-medium text-gray-400">Course Hash:</span> {blockchainData.courseHash}</p>
-                    <p><span className="font-medium text-gray-400">Issuer Hash:</span> {blockchainData.issuerHash}</p>
-                    <p><span className="font-medium text-gray-400">Issued On:</span> {new Date(blockchainData.issuedOn * 1000).toLocaleString()}</p>
+            <section>
+              <Separator className="my-6" />
+              <h3 className="text-lg font-semibold mb-4">Immutable Record (Blockchain)</h3>
+
+              <Button
+                className="w-full mb-4"
+                onClick={onFetchBlockchain}
+                disabled={loadingChain}
+              >
+                {loadingChain ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Verifying on Blockchain...</>
+                ) : (
+                  "Verify on Blockchain"
+                )}
+              </Button>
+
+              {/* Blockchain Data Display */}
+              {blockchainData && (
+                <Card className="p-4 bg-muted/20 border-border">
+                  <div className="space-y-1 text-xs break-words font-mono">
+                    <p className="text-muted-foreground">Blockchain Record Found:</p>
+                    <DetailItem label="Certificate Hash" value={blockchainData.certHash} />
+                    <DetailItem label="Course Hash" value={blockchainData.courseHash} />
+                    <DetailItem label="Issuer Hash" value={blockchainData.issuerHash} />
+                    <DetailItem label="Issued On" value={new Date(blockchainData.issuedOn * 1000).toLocaleString()} />
                   </div>
-                )}
-                {certificate.transaction_hash && (
-                  <a
-                    href={`https://amoy.polygonscan.com/tx/${certificate.transaction_hash}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-2 inline-block w-full text-center px-4 py-2 rounded font-medium transition-colors bg-gray-600 text-white hover:bg-gray-500"
-                  >
-                    View Transaction on PolygonScan
-                  </a>
-                )}
-              </div>
-            </div>
+                </Card>
+              )}
+
+              {/* PolygonScan Link */}
+              {certificate.transaction_hash && (
+                <a
+                  href={`https://amoy.polygonscan.com/tx/${certificate.transaction_hash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-4 w-full inline-flex bg-secondary text-secondary-foreground hover:bg-secondary/80 items-center justify-center gap-2 px-4 py-2 rounded-md"
+                >
+                  View Transaction on PolygonScan <ExternalLink className="h-4 w-4" />
+                </a>
+              )}
+            </section>
           )}
         </div>
-      </div>
-    </div>
+        {/* DialogClose is automatically positioned in the top corner by Shadcn */}
+      </DialogContent>
+    </Dialog>
   );
 };
 
@@ -258,22 +287,29 @@ export default function MyCertificatesPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen p-6 text-foreground flex items-center justify-center">
-        <p className="text-xl">Loading your certificates...</p>
+        <Loader2 className="mr-2 h-6 w-6 animate-spin text-primary" />
+        <p className="text-xl text-muted-foreground">Loading your certificates...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen p-4 sm:p-6 text-foregorund">
+    <div className="min-h-screen p-4 sm:p-6 bg-background">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">My Certificates</h1>
+        <h1 className="text-3xl font-bold mb-6 text-foreground">My Certificates</h1>
         {certificates.length === 0 ? (
-          <div className="text-center py-10 border border-dashed border-gray-700 rounded-lg">
-            <p className="text-gray-400">You have not submitted any certificates yet.</p>
+          <div className="text-center py-10 border border-dashed border-border rounded-lg bg-card shadow-sm">
+            <p className="text-muted-foreground">You have not submitted any certificates yet.</p>
           </div>
         ) : (
           <div className="space-y-4">
-            {certificates.map((cert) => (<CertificateCard key={cert._id} certificate={cert} onClick={() => setSelectedCertificate(cert)} />))}
+            {certificates.map((cert) => (
+              <CertificateCard
+                key={cert._id}
+                certificate={cert}
+                onClick={() => setSelectedCertificate(cert)}
+              />
+            ))}
           </div>
         )}
       </div>

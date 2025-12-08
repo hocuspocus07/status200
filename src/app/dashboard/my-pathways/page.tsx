@@ -2,6 +2,13 @@
 
 import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
+import { Loader2, Zap, GraduationCap, TrendingUp, CheckCircle, XCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 // --- INTERFACES ---
 interface Certificate {
@@ -38,33 +45,54 @@ interface PathwayResponse {
 }
 
 // --- HELPER COMPONENTS ---
+
+// Helper function uses standard Shadcn badge variants
 const getStatusProps = (cert: Certificate) => {
   if (cert.is_verified) {
-    return { text: 'Verified', className: 'bg-green-800 text-green-200' };
+    return { text: 'Verified', variant: 'default' as const, icon: CheckCircle };
   }
   if (cert.reasons_for_failure && cert.reasons_for_failure.length > 0) {
-     return { text: 'Failed', className: 'bg-red-800 text-red-200' };
+    // Using 'destructive' for failed verification
+    return { text: 'Failed', variant: 'destructive' as const, icon: XCircle };
   }
-  return { text: 'Failed', className: 'bg-red-800 text-red-200' };
+  // Fallback to a neutral state if verification is ongoing/not yet determined
+  return { text: 'Pending', variant: 'secondary' as const, icon: Loader2 };
 };
 
-const CertificateBar = ({ certificate, onClick }: { certificate: Certificate; onClick: () => void; }) => {
+export function CertificateCard({
+  certificate,
+  onClick,
+}: {
+  certificate: Certificate;
+  onClick: () => void;
+}) {
   const status = getStatusProps(certificate);
+
   return (
-    <div
+    <Card
       onClick={onClick}
-      className="flex items-center justify-between p-4 border border-gray-700 rounded-lg bg-gray-900 cursor-pointer hover:border-cyan-400 transition-colors"
+      className="cursor-pointer transition-shadow hover:shadow-lg hover:border-primary/50"
     >
-      <div>
-        <h3 className="font-semibold text-lg text-cyan-400">{certificate.course}</h3>
-        <p className="text-sm text-gray-400">Issued by: {certificate.issued_by}</p>
-      </div>
-      <div className={`px-3 py-1 text-xs font-medium rounded-full ${status.className}`}>
-        {status.text}
-      </div>
-    </div>
+      <CardHeader className="pb-4">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <CardTitle className="text-xl leading-tight">
+              {certificate.course}
+            </CardTitle>
+            <CardDescription className="text-sm">
+              Issued by   **{certificate.issued_by}**
+            </CardDescription>
+          </div>
+
+          <Badge variant={status.variant} className="h-fit text-xs px-3 py-1 flex items-center gap-1">
+            <status.icon className={cn("h-3 w-3", status.text === 'Pending' && 'animate-spin')} />
+            {status.text}
+          </Badge>
+        </div>
+      </CardHeader>
+    </Card>
   );
-};
+}
 
 const CertificateModal = ({
   certificate,
@@ -82,84 +110,141 @@ const CertificateModal = ({
   const status = getStatusProps(certificate);
 
   const DetailItem = ({ label, value }: { label: string; value: React.ReactNode }) => (
-    <div className="flex flex-col sm:flex-row">
-      <dt className="w-full sm:w-1/3 font-medium text-gray-400">{label}</dt>
-      <dd className="w-full sm:w-2/3 text-white">{value}</dd>
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-1.5">
+      <dt className="font-medium text-muted-foreground">{label}</dt>
+      <dd className="sm:col-span-2 text-foreground break-words">{value}</dd>
     </div>
   );
 
+  // Modal content width increased from max-w-4xl to max-w-6xl for better spacing.
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50 p-4" onClick={onClose}>
-      <div className="bg-gray-900 border border-gray-700 rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+    <Dialog open={!!certificate} onOpenChange={onClose}>
+      <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col p-0">
         {/* Modal Header */}
-        <div className="flex justify-between items-center p-4 border-b border-gray-700 flex-shrink-0">
-          <h2 className="text-xl font-bold text-cyan-400">{certificate.course}</h2>
-          <button onClick={onClose} className="text-gray-400 text-2xl leading-none hover:text-white">&times;</button>
-        </div>
+        <DialogHeader className="p-6 pb-4 border-b">
+          <DialogTitle className="text-2xl font-bold">{certificate.course}</DialogTitle>
+          <DialogDescription>Certificate record and potential career paths.</DialogDescription>
+        </DialogHeader>
 
-        <div className="overflow-y-auto p-6 space-y-8">
+        <div className="overflow-y-auto px-6 py-4 space-y-8">
 
-          {/* Basic Details */}
-          <div>
-            <h3 className="text-lg font-semibold text-white mb-4">Certificate Details</h3>
-            {certificate.bucket_image_url && (
-              <img src={certificate.bucket_image_url} alt={`Certificate for ${certificate.course}`} className="mb-6 rounded-md w-full object-contain border border-gray-700 max-h-80" />
-            )}
-            <dl className="space-y-3 text-sm">
-              <DetailItem label="Recipient" value={certificate.issued_to} />
-              <DetailItem label="Issued by" value={certificate.issued_by} />
-              <DetailItem label="Date Passed" value={new Date(certificate.passed_at).toLocaleDateString()} />
-              {certificate.nsqf_level && <DetailItem label="NSQF Level" value={certificate.nsqf_level} />}
-              <DetailItem label="Status" value={<span className={`px-2 py-0.5 text-xs font-medium rounded-full ${status.className}`}>{status.text}</span>} />
-            </dl>
-          </div>
+          {/* Basic Details Column */}
+          <section>
+            <h3 className="text-xl font-semibold mb-4 text-primary">Certificate Details</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-          {/* Progression Pathways Section */}
-          <div>
-            <hr className="border-gray-700 mb-6" />
+              {/* Left Column: Image & Core Meta */}
+              <div className="space-y-4">
+                {certificate.bucket_image_url && (
+                  <div className="border rounded-lg overflow-hidden shadow-md">
+                    <img
+                      src={certificate.bucket_image_url}
+                      alt={`Certificate for ${certificate.course}`}
+                      className="w-full object-cover max-h-60 bg-muted"
+                    />
+                  </div>
+                )}
+                <dl className="space-y-1 text-sm bg-muted/30 p-4 rounded-lg">
+                  <DetailItem label="Recipient" value={certificate.issued_to} />
+                  <DetailItem label="Issued by" value={certificate.issued_by} />
+                  <DetailItem label="Date Passed" value={new Date(certificate.passed_at).toLocaleDateString()} />
+                  {certificate.nsqf_level && <DetailItem label="NSQF Level" value={<Badge variant="outline">{certificate.nsqf_level}</Badge>} />}
+                  <DetailItem label="Status" value={<Badge variant={status.variant} className="text-xs">{status.text}</Badge>} />
+                  <DetailItem label="Source" value={certificate.certif_medium || 'N/A'} />
+                </dl>
+              </div>
+
+              {/* Right Column: Detailed Outcomes/Failures */}
+              <div className="space-y-4">
+                {/* Outcome Details */}
+                <Card className="shadow-none">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2 text-foreground/80"><GraduationCap className="w-4 h-4 text-primary" /> Key Learning Outcomes</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-sm text-muted-foreground pt-0">
+                    {certificate.outcomes || certificate.syllabus || "No detailed syllabus or outcome information available."}
+                  </CardContent>
+                </Card>
+
+                {/* Job Details */}
+                <Card className="shadow-none">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2 text-foreground/80"><TrendingUp className="w-4 h-4 text-primary" /> Associated Jobs</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-sm text-muted-foreground pt-0">
+                    {certificate.jobs || "No specific job roles provided with this certificate."}
+                  </CardContent>
+                </Card>
+
+                {/* Failure Reasons Block */}
+                {status.text === 'Failed' && certificate.reasons_for_failure && (
+                  <div className="p-4 border border-destructive/50 bg-destructive/10 rounded-md text-sm">
+                    <p className="font-semibold text-destructive mb-2">Verification Failed Reasons:</p>
+                    <ul className="list-disc list-inside text-destructive/90 space-y-0.5 ml-2">
+                      {certificate.reasons_for_failure.map((reason, index) => <li key={index}>{reason}</li>)}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+
+          {/* Pathway Section */}
+          <section>
+            <Separator className="my-6" />
+
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-white">Career Progression Pathways</h3>
+              <h3 className="text-xl font-semibold text-primary flex items-center gap-2"><Zap className="w-5 h-5" /> Career Pathways</h3>
+
+              {/* Pathway Generation Button */}
               {!pathwayData && (
-                <button
+                <Button
                   onClick={onFetchPathways}
                   disabled={loadingPathways}
-                  className={`px-4 py-2 text-sm rounded font-medium transition-colors ${loadingPathways ? "bg-gray-700 cursor-not-allowed" : "bg-cyan-600 text-white hover:bg-cyan-500"}`}
                 >
-                  {loadingPathways ? "Generating..." : "Generate Pathways"}
-                </button>
+                  {loadingPathways ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generating...</> : "Generate Pathways"}
+                </Button>
               )}
             </div>
 
             {pathwayData && (
-              <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="p-3 bg-gray-800/50 rounded border border-gray-700 text-sm text-gray-300">
-                  <span className="font-semibold text-cyan-400">Current Level:</span> NSQF {pathwayData.start_level}
+              <div className="space-y-4">
+                {/* Current Level Indicator */}
+                <div className="p-3 bg-secondary/30 rounded-lg border border-secondary text-sm text-secondary-foreground">
+                  <span className="font-semibold">Starting Point:</span> Your current certificate aligns with NSQF Level   **{pathwayData.start_level}**.
                 </div>
+
+                {/* Pathway Cards */}
                 <div className="grid gap-4">
                   {pathwayData.pathway.map((path, idx) => (
-                    <div key={idx} className="p-4 bg-gray-800 border border-gray-700 rounded-lg hover:border-cyan-500/50 transition-colors">
-                      <div className="flex justify-between items-start mb-2">
-                        <h4 className="font-bold text-white text-lg">{path.courseName}</h4>
-                        <span className="px-2 py-1 bg-purple-900/50 text-purple-200 text-xs rounded border border-purple-700">
-                          NSQF {path.NSQFLevel}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 mb-3 text-xs text-gray-400">
-                        <div className="w-full bg-gray-700 rounded-full h-1.5 max-w-[100px]">
-                          <div className="bg-cyan-500 h-1.5 rounded-full" style={{ width: `${path.similarity * 100}%` }}></div>
+                    <Card key={idx} className="hover:border-primary transition-colors">
+                      <CardHeader className="pb-3">
+                        <div className="flex justify-between items-start">
+                          <CardTitle className="text-lg font-bold text-foreground">{path.courseName}</CardTitle>
+                          <Badge variant="outline" className="text-xs bg-muted border-primary/50 text-primary">
+                            NSQF {path.NSQFLevel}
+                          </Badge>
                         </div>
-                        <span>{(path.similarity * 100).toFixed(0)}% Match</span>
-                      </div>
-                      <p className="text-sm text-gray-300 leading-relaxed">{path.syllabusCovered}</p>
-                    </div>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <div className="w-24 bg-muted-foreground/20 rounded-full h-2">
+                            {/* Similarity Bar using primary color */}
+                            <div className="bg-primary h-2 rounded-full" style={{ width: `${path.similarity * 100}%` }}></div>
+                          </div>
+                          <span>{(path.similarity * 100).toFixed(0)}% Syllabus Match</span>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="text-sm text-muted-foreground leading-relaxed pt-0">
+                        **Focus:**   {path.syllabusCovered}
+                      </CardContent>
+                    </Card>
                   ))}
                 </div>
               </div>
             )}
-          </div>
+          </section>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 
@@ -195,7 +280,6 @@ export default function MyCertificatesPage() {
         }
 
         const data = await response.json();
-        console.log("[debug]: Fetched certificates:", data);
         setCertificates(data.certificates || []);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Could not fetch certificates.";
@@ -211,14 +295,12 @@ export default function MyCertificatesPage() {
 
   const handleFetchPathways = async (certificate: Certificate) => {
     const certId = certificate._id;
-
-    // If we already have data, don't fetch again (optional optimization)
-    if (pathwayData[certId]) return;
+    if (pathwayData[certId]) return; // Skip if already loaded
 
     setLoadingPathways((prev) => ({ ...prev, [certId]: true }));
 
     try {
-      // Using the localhost:4500 endpoint as requested
+      // Using the localhost:4500 endpoint as provided
       const res = await fetch("http://localhost:4500/pathway", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -238,7 +320,7 @@ export default function MyCertificatesPage() {
       toast.success("Pathways generated successfully!");
     } catch (err) {
       console.error(err);
-      toast.error("Failed to generate pathways. Ensure the AI service is running.");
+      toast.error("Failed to generate pathways. Check the service connection.");
     } finally {
       setLoadingPathways((prev) => ({ ...prev, [certId]: false }));
     }
@@ -247,24 +329,33 @@ export default function MyCertificatesPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen p-6 text-foreground flex items-center justify-center">
-        <p className="text-xl">Loading your certificates...</p>
+        <Loader2 className="mr-2 h-6 w-6 animate-spin text-primary" />
+        <p className="text-xl text-muted-foreground">Loading your certificates...</p>
+
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen p-4 sm:p-6 text-foregorund">
+    <div className="min-h-screen p-4 sm:p-6 bg-background">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">My Certificates</h1>
+        <h1 className="text-3xl font-bold mb-6 text-foreground">My Credentials</h1>
         {certificates.length === 0 ? (
-          <div className="text-center py-10 border border-dashed border-gray-700 rounded-lg">
-            <p className="text-gray-400">You have not submitted any certificates yet.</p>
+          <div className="text-center py-10 border border-dashed border-border rounded-lg bg-card shadow-sm">
+            <p className="text-muted-foreground">You have no certificates. Use the "Upload" feature to add your first credential!</p>
           </div>
         ) : (
           <div className="space-y-4">
-            {certificates.map((cert) => (<CertificateBar key={cert._id} certificate={cert} onClick={() => setSelectedCertificate(cert)} />))}
+            {certificates.map((cert) => (
+              <CertificateCard
+                key={cert._id}
+                certificate={cert}
+                onClick={() => setSelectedCertificate(cert)}
+              />
+            ))}
           </div>
         )}
+
       </div>
 
       {selectedCertificate && (
