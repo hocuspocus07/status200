@@ -70,6 +70,13 @@ export default function NetworkPage() {
         break
     }
 
+    // Sort by premium status first (premium users appear first)
+    list.sort((a, b) => {
+      const aPremium = a.isPremium ? 1 : 0
+      const bPremium = b.isPremium ? 1 : 0
+      return bPremium - aPremium
+    })
+
     return list
   }, [data, filters])
 

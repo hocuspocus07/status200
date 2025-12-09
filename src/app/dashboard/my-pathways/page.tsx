@@ -67,7 +67,6 @@ export function CertificateCard({
   onClick: () => void;
 }) {
   const status = getStatusProps(certificate);
-
   return (
     <Card
       onClick={onClick}
@@ -116,7 +115,28 @@ const CertificateModal = ({
     </div>
   );
 
-  // Modal content width increased from max-w-4xl to max-w-6xl for better spacing.
+  const [userIsPremium, setUserIsPremium] = useState(false);
+
+  useEffect(() => {
+    const getUserIsPremium = async () => {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`/api/users/me`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      res.json().then((data) => {
+        setUserIsPremium(data.user.isPremium);
+      })
+    }
+
+    getUserIsPremium();
+  }, []);
+
+  const redirectToPremiumPage = () => {
+    toast.error("Upgrade to Premium to access this feature.")
+    window.location.href = "/pricing";
+  };
+
+  // Modal contconst eent width increased from max-w-4xl to max-w-6xl for better spacing.
   return (
     <Dialog open={!!certificate} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-4xl w-full max-h-[90vh] flex flex-col p-0">        {/* Modal Header */}
@@ -198,10 +218,14 @@ const CertificateModal = ({
               {/* Pathway Generation Button */}
               {!pathwayData && (
                 <Button
-                  onClick={onFetchPathways}
+                  onClick={userIsPremium ? onFetchPathways : redirectToPremiumPage}
                   disabled={loadingPathways}
                 >
-                  {loadingPathways ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generating...</> : "Generate Pathways"}
+                  {userIsPremium
+                    ? loadingPathways
+                      ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generating...</>
+                      : "Generate Pathways"
+                    : "Upgrade to Premium to Generate"}
                 </Button>
               )}
             </div>
