@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useMemo } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { Loader2, Briefcase, MapPin, Search } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,20 +9,49 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 
-// AL AYAAN ANSARI | Roll NO. 23BCS034
+type BaseJob = {
+  _id: string;
+  title: string;
+  company: string;
+  location: string;
+  description: string;
+  requirements?: string[];
+  tags?: string[];
+  createdAt?: string
+};
 
-type Job = {
-  _id: string
-  title: string
-  company: string
-  location: string
+type Job = BaseJob & {
   jobType: string
-  description: string
-  requirements?: string[]
   salaryRange?: { min?: number; max?: number }
   remote?: boolean
-  createdAt?: string
 }
+
+type ExternalJob = BaseJob & {
+  posted: string;
+  updatedAt: string;
+
+  jobLink: string,
+  companyLink: string,
+  companyLogo: string,
+  jobId: string,
+};
+
+type UnifiedJob = {
+  _id: string;
+  title: string;
+  company: string;
+  location: string;
+  description: string;
+  tags?: string[];
+  createdAt?: string;
+  isExternal: boolean;
+  jobType?: string;
+  remote?: boolean;
+  salaryRange?: { min?: number; max?: number };
+  jobLink?: string;
+};
+
+const EXTERNAL_JOBS_SERVICE = process.env.NEXT_PUBLIC_EXTERNAL_JOBS_SERVICE || "http://localhost:7700";
 
 const initialFilters = {
   q: "",
@@ -34,6 +63,8 @@ const initialFilters = {
 export default function JobsBrowsePage() {
   const [tokenChecked, setTokenChecked] = useState(false)
   const [jobs, setJobs] = useState<Job[]>([])
+  const [externalJobs, setExternalJobs] = useState<ExternalJob[]>([]);
+  const [allJobs, setAllJobs] = useState<UnifiedJob[]>([]);
   const [loading, setLoading] = useState(true)
   const [filters, setFilters] = useState({ ...initialFilters })
 
@@ -64,37 +95,57 @@ export default function JobsBrowsePage() {
       const data = await res.json()
       setJobs(Array.isArray(data.jobs) ? data.jobs : [])
     } catch (error) {
-      console.error(error)
+      console.error("Error fetching jobs:", error)
       setJobs([])
+    }
+
+    // Load external jobs separately - don't let this failure affect internal jobs
+    try {
+      const externalRes = await fetch(`${EXTERNAL_JOBS_SERVICE}/jobs/all`);
+      if (!externalRes.ok) {
+        throw new Error("Failed to fetch external jobs");
+      }
+      const externalData = await externalRes.json();
+      // console.log('[debug]: externalData: ', externalData);
+      setExternalJobs(Array.isArray(externalData) ? externalData : []);
+    } catch (error) {
+      console.error("Error fetching external jobs:", error)
+      setExternalJobs([])
     } finally {
       setLoading(false)
     }
   }
 
-  const { sortedJobs, latestJobIds } = useMemo(() => {
-    if (!jobs.length) return { sortedJobs: [], latestJobIds: new Set() }
+  // Merge jobs whenever jobs or externalJobs change
+  useEffect(() => {
+    const internalJobsNormalized: UnifiedJob[] = jobs.map(job => ({
+      _id: job._id,
+      title: job.title,
+      company: job.company,
+      location: job.location,
+      description: job.description,
+      tags: job.requirements,
+      createdAt: job.createdAt,
+      isExternal: false,
+      jobType: job.jobType,
+      remote: job.remote,
+      salaryRange: job.salaryRange,
+    }));
 
-    // 1. Sort by createdAt Descending (Newest first)
-    // FIX: Changed from dateA - dateB to dateB - dateA
-    const sorted = [...jobs].sort((a, b) => {
-      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0
-      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0
-      return dateB - dateA // Descending order
-    })
+    const externalJobsNormalized: UnifiedJob[] = externalJobs.map(job => ({
+      _id: job._id,
+      title: job.title,
+      company: job.company,
+      location: job.location,
+      description: job.description,
+      tags: job.tags,
+      createdAt: job.createdAt,
+      isExternal: true,
+      jobLink: job.jobLink,
+    }));
 
-    // 2. Identify the top 3 latest jobs (Newest first)
-    // This remains the same to identify which ones get the "New" badge
-    const latest = [...jobs]
-      .sort((a, b) => {
-        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0
-        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0
-        return dateB - dateA // Descending order
-      })
-      .slice(0, 3)
-      .map((job) => job._id)
-
-    return { sortedJobs: sorted, latestJobIds: new Set(latest) }
-  }, [jobs])
+    setAllJobs([...internalJobsNormalized, ...externalJobsNormalized]);
+  }, [jobs, externalJobs]);
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -186,7 +237,7 @@ export default function JobsBrowsePage() {
             <div className="flex justify-center py-20">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
-          ) : sortedJobs.length === 0 ? (
+          ) : allJobs.length === 0 ? (
             <Card className="border-dashed">
               <CardHeader>
                 <CardTitle>No jobs match the filters</CardTitle>
@@ -194,32 +245,28 @@ export default function JobsBrowsePage() {
               </CardHeader>
             </Card>
           ) : (
-            sortedJobs.map((job) => {
-              const isNew = latestJobIds.has(job._id)
-              return (
-                <Card key={job._id} className="hover:border-primary/60 transition-colors">
-                  <CardHeader className="space-y-1">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <CardTitle className="text-xl">{job.title}</CardTitle>
-                          {isNew && (
-                            <Badge className="bg-emerald-600 hover:bg-emerald-700 animate-in fade-in zoom-in duration-300">
-                              New
-                            </Badge>
-                          )}
-                        </div>
-                        <CardDescription className="flex flex-wrap items-center gap-2 mt-1">
-                          <span className="font-medium text-foreground">{job.company}</span>
-                          <span className="flex items-center gap-1 text-sm">
-                            <MapPin className="h-4 w-4" />
-                            {job.location}
-                          </span>
-                        </CardDescription>
-                      </div>
-                      <Badge variant="secondary">{job.jobType}</Badge>
+            allJobs.map((job, idx) => (
+              <Card key={job._id} className="hover:border-primary/60 transition-colors">
+                <CardHeader className="space-y-1">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <CardTitle className="text-xl">
+                        {job.title}
+                        {idx < 3 && !job.isExternal && <span className="ml-2 inline-block rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">New</span>}
+                        {job.isExternal && <span className="text-sm text-muted-foreground"> (external)</span>}
+                      </CardTitle>
+                      <CardDescription className="flex flex-wrap items-center gap-2">
+                        <span className="font-medium text-foreground">{job.company}</span>
+                        <span className="flex items-center gap-1 text-muted-foreground text-sm">
+                          <MapPin className="h-4 w-4" />
+                          {job.location}
+                        </span>
+                      </CardDescription>
                     </div>
-                    <div className="flex flex-wrap gap-2 text-xs">
+                    <Badge variant="secondary">{job.isExternal ? "External" : job.jobType}</Badge>
+                  </div>
+                  {!job.isExternal && (
+                    <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                       {job.remote && <Badge variant="outline">Remote friendly</Badge>}
                       {job.salaryRange?.min && (
                         <span>
@@ -228,37 +275,41 @@ export default function JobsBrowsePage() {
                         </span>
                       )}
                     </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <p className="text-sm line-clamp-3">{job.description}</p>
+                  )}
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-muted-foreground line-clamp-3">{job.description}</p>
 
-                    {job.requirements && job.requirements.length > 0 && (
-                      <div className="flex flex-wrap gap-2">
-                        {job.requirements.slice(0, 4).map((req) => (
-                          <Badge key={req} variant="outline" className="text-xs">
-                            {req}
-                          </Badge>
-                        ))}
-                        {job.requirements.length > 4 && (
-                          <span className="text-xs">
-                            +{job.requirements.length - 4} more
-                          </span>
-                        )}
-                      </div>
-                    )}
-
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <p className="text-xs">
-                        Posted {job.createdAt ? new Date(job.createdAt).toLocaleDateString() : "recently"}
-                      </p>
-                      <Button asChild>
-                        <Link href={`/dashboard/jobs/${job._id}`}>View & Apply</Link>
-                      </Button>
+                  {job.tags && job.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {job.tags.slice(0, 4).map((tag, idx) => (
+                        <Badge key={`${tag}-${idx}`} variant="outline" className="text-xs">
+                          {tag}
+                        </Badge>
+                      ))}
+                      {job.tags.length > 4 && (
+                        <span className="text-xs text-muted-foreground">
+                          +{job.tags.length - 4} more
+                        </span>
+                      )}
                     </div>
-                  </CardContent>
-                </Card>
-              )
-            })
+                  )}
+
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-xs text-muted-foreground">
+                      Posted {job.createdAt ? new Date(job.createdAt).toLocaleDateString() : "recently"}
+                    </p>
+                    <Button asChild>
+                      {job.isExternal ? (
+                        <Link href={job.jobLink || "#"} target="_blank" rel="noopener noreferrer">View & Apply</Link>
+                      ) : (
+                        <Link href={`/dashboard/jobs/${job._id}`}>View & Apply</Link>
+                      )}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
           )}
         </section>
       </div>

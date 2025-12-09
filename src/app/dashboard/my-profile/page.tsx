@@ -12,6 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Calendar, GraduationCap, MapPin, AtSign, LinkIcon, Award, Plus, Pencil, Briefcase, Mail, LogOut, Loader2, X, Sparkles, Lock, Unlock } from "lucide-react"
 import { toast } from "sonner"
 import { Switch } from "@/components/ui/switch"
+import Link from "next/link"
 
 type Education = {
   _id: string
@@ -650,7 +651,9 @@ export default function DashboardProfile() {
                 <div className="text-xs md:text-sm  ">No certificates added yet.</div>
               )}
               <Button className="w-full bg-transparent text-xs md:text-sm" variant="outline">
+                <Link href="/dashboard/my-credentials">
                 Manage All
+                </Link>
               </Button>
             </CardContent>
           </Card>
