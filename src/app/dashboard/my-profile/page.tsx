@@ -338,7 +338,7 @@ export default function DashboardProfile() {
                       <span
                         className="ml-2 px-4 text-[10px] md:text-sm text-yellow-400 border-2 border-yellow-400 rounded-md shadow-sm"
                       >
-                        {isEmployee ? "Employee" : "Premium"}
+                        {isEmployee ? "Employee" : "PRO"}
                       </span>
                     )}</h2>
 
