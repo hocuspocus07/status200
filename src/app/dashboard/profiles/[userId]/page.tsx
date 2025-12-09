@@ -639,7 +639,7 @@ if (pendingOut) {
                                 {cert.is_verified ? (
                                   <span className="text-green-500 font-semibold">Verified</span>
                                 ) : (
-                                  <span className="text-yellow-500 font-semibold">Pending</span>
+                                  <span className="text-red-500 font-semibold">Failed</span>
                                 )}
                               </div>
                               {cert.blockchain_certificate_hash && (
