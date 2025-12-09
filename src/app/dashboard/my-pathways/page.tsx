@@ -136,7 +136,7 @@ const CertificateModal = ({
     window.location.href = "/pricing";
   };
 
-  // Modal contconst eent width increased from max-w-4xl to max-w-6xl for better spacing.
+  // Modal content width increased from max-w-4xl to max-w-6xl for better spacing.
   return (
     <Dialog open={!!certificate} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-4xl w-full max-h-[90vh] flex flex-col p-0">        {/* Modal Header */}

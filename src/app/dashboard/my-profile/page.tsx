@@ -71,6 +71,7 @@ export default function DashboardProfile() {
   const [originalState, setOriginalState] = useState<any>(null);
   const [isPublic, setIsPublic] = useState(true);
   const [isEmployee, setIsEmployee] = useState(false);
+  const [isPremium, setIsPremium] = useState(false);
 
 
   const [form, setForm] = useState({
@@ -121,6 +122,7 @@ export default function DashboardProfile() {
           setSkills(profile.skills || [])
           setIsPublic(profile.isPublic ?? true);
           setIsEmployee(profile.isEmployee ?? false);
+          setIsPremium(profile.isPremium ?? false);
 
 
           captureOriginalState(profile);
@@ -326,21 +328,19 @@ export default function DashboardProfile() {
           <div className="flex flex-col gap-4 md:gap-6">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 justify-between">
               <div className="flex items-start sm:items-center gap-4">
-                <Avatar className="h-16 w-16 md:h-20 md:w-20">
+                <Avatar className={`h-16 w-16 md:h-20 md:w-20 ${isPremium ? "border-4 border-yellow-400" : ""}`}>
                   <AvatarImage src="/placeholder-user.jpg" alt="User avatar" />
                   <AvatarFallback>{initials}</AvatarFallback>
                 </Avatar>
                 <div className="space-y-1 flex-1 min-w-0">
-                  <h2 className="text-lg md:text-xl font-bold text-foreground">{user?.name} {isEmployee && (
-                    <span
-                      className="px-4 text-[10px] md:text-xs 
-               text-yellow-400 bg-neutral-900 
-               border border-yellow-400 
-               rounded-md shadow-sm"
-                    >
-                      Employee
-                    </span>
-                  )}</h2>
+                  <h2 className="text-lg md:text-xl font-bold text-foreground">{user?.name}
+                    {(isEmployee || isPremium) && (
+                      <span
+                        className="ml-2 px-4 text-[10px] md:text-sm text-yellow-400 border-2 border-yellow-400 rounded-md shadow-sm"
+                      >
+                        {isEmployee ? "Employee" : "Premium"}
+                      </span>
+                    )}</h2>
 
                   <p className="text-sm  line-clamp-1">{headline}</p>
                   <div className="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center gap-2 sm:gap-3 text-xs md:text-sm  ">
@@ -465,15 +465,15 @@ export default function DashboardProfile() {
                         onCheckedChange={setIsPublic}
                       />
                     </div>
-                    
+
                     {/* GDPR Legal Text */}
                     <div className="rounded-md bg-muted/50 p-3 text-xs   border border-muted">
                       <p className="font-semibold mb-1 text-foreground/80">GDPR Consent Declaration:</p>
                       <p>
-                        By toggling this setting to <strong>Public</strong>, you provide 
-                        <span className="italic"> explicit consent</span> for Certi-fi to display your 
-                        professional data to registered third-party verifiers. 
-                        You reserve the <strong>Right to Withdraw Consent</strong> at any time 
+                        By toggling this setting to <strong>Public</strong>, you provide
+                        <span className="italic"> explicit consent</span> for Certi-fi to display your
+                        professional data to registered third-party verifiers.
+                        You reserve the <strong>Right to Withdraw Consent</strong> at any time
                         by switching this toggle back to <strong>Private</strong>.
                       </p>
                     </div>
@@ -652,7 +652,7 @@ export default function DashboardProfile() {
               )}
               <Button className="w-full bg-transparent text-xs md:text-sm" variant="outline">
                 <Link href="/dashboard/my-credentials">
-                Manage All
+                  Manage All
                 </Link>
               </Button>
             </CardContent>

@@ -67,7 +67,6 @@ export default function PremiumAdModal({ isUserPremium }: PremiumAdModalProps) {
                         className="absolute right-0 top-0 h-6 w-6 p-0 rounded-full text-gray-500 hover:text-gray-900"
                         onClick={handleClose}
                     >
-                        <X className="h-5 w-5" />
                         <span className="sr-only">Close</span>
                     </Button>
                 </DialogHeader>
@@ -87,7 +86,7 @@ export default function PremiumAdModal({ isUserPremium }: PremiumAdModalProps) {
                     className="w-full text-lg py-6 bg-purple-600 hover:bg-purple-700 transition"
                     onClick={handleUpgrade}
                 >
-                    Upgrade Now for Only $399/mo
+                    Upgrade Now for Only ₹399/month
                 </Button>
 
                 <p className="text-center text-xs text-muted-foreground pt-2">
