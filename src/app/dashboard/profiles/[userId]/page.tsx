@@ -582,7 +582,7 @@ if (pendingOut) {
               </TabsList>
 
               <TabsContent value="certificates" className="mt-4">
-                <Card>
+                <Card className="h-full">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Award className="h-5 w-5" /> Verified Certificates
@@ -609,32 +609,34 @@ if (pendingOut) {
                   <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {user.certificates?.length ? (
                       user.certificates.map((cert, i) => (
-                        <Link href={`/dashboard/certificates/${cert._id}`} key={cert._id}>
-                          <Card className="overflow-hidden shadow-lg hover:shadow-xl">
-                            <img
-                              src={cert.bucket_image_url}
-                              alt={cert.course}
-                              className="w-full h-48 object-cover"
-                              onError={(e) => {
-                                const target = e.target as HTMLImageElement;
-                                target.src = `https://placehold.co/600x400?text=${cert.course}`;
-                              }}
-                            />
-                            <CardHeader>
-                              <CardTitle className="text-lg">{cert.course}</CardTitle>
-                              <CardDescription>Issued by: {cert.issued_by}</CardDescription>
+                        <Link href={`/dashboard/certificates/${cert._id}`} key={cert._id} className="h-full">
+                          <Card className="overflow-hidden shadow-lg hover:shadow-xl h-full flex flex-col">
+                            <div className="relative w-full h-48 shrink-0">
+                              <img
+                                src={cert.bucket_image_url}
+                                alt={cert.course}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.src = `https://placehold.co/600x400?text=${cert.course}`;
+                                }}
+                              />
+                            </div>
+                            <CardHeader className="flex-none">
+                              <CardTitle className="text-lg line-clamp-2">{cert.course}</CardTitle>
+                              <CardDescription className="line-clamp-1">Issued by: {cert.issued_by}</CardDescription>
                             </CardHeader>
-                            <CardContent className="space-y-2 text-sm">
+                            <CardContent className="space-y-2 text-sm flex-1">
                               <div className="flex items-center gap-2">
-                                <BookMarked className="h-4 w-4" />
+                                <BookMarked className="h-4 w-4 shrink-0" />
                                 NSQF Level: {cert.nsqf_level}
                               </div>
                               <div className="flex items-center gap-2">
-                                <CalendarDays className="h-4 w-4" />
+                                <CalendarDays className="h-4 w-4 shrink-0" />
                                 Passed: {formatDate(cert.passed_at)}
                               </div>
                               <div className="flex items-center gap-2">
-                                <UserCheck className="h-4 w-4" />
+                                <UserCheck className="h-4 w-4 shrink-0" />
                                 Status:{" "}
                                 {cert.is_verified ? (
                                   <span className="text-green-500 font-semibold">Verified</span>
@@ -644,7 +646,7 @@ if (pendingOut) {
                               </div>
                               {cert.blockchain_certificate_hash && (
                                 <div className="flex items-center gap-2 text-xs pt-2">
-                                  <LinkIcon className="h-3 w-3" />
+                                  <LinkIcon className="h-3 w-3 shrink-0" />
                                   <span className="truncate">
                                     Hash: {cert.blockchain_certificate_hash}
                                   </span>
@@ -665,7 +667,7 @@ if (pendingOut) {
 
               <TabsContent value="about" className="mt-4">
                 <div className="space-y-6">
-                  <Card>
+                  <Card className="h-full">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
                         <Info className="h-5 w-5" /> About
@@ -684,7 +686,7 @@ if (pendingOut) {
                     </CardContent>
                   </Card>
 
-                  <Card>
+                  <Card className="h-full">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
                         <GraduationCap className="h-5 w-5" /> Education
@@ -721,7 +723,7 @@ if (pendingOut) {
                     </CardContent>
                   </Card>
 
-                  <Card>
+                  <Card className="h-full">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
                         <Sparkles className="h-5 w-5" /> Skills
@@ -750,7 +752,7 @@ if (pendingOut) {
               </TabsContent>
             </Tabs>
           ) : (
-            <Card className="mt-6 py-20 flex flex-col items-center justify-center text-center">
+            <Card className="mt-6 py-20 flex flex-col items-center justify-center text-center h-full">
               <Lock className="h-12 w-12 text-gray-400 mb-4" />
               <p className="text-lg font-semibold">This profile is private</p>
               <p className="text-sm text-muted-foreground mt-1">

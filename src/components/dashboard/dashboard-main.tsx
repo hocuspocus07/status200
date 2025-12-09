@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState, useMemo } from "react"
+import Link from "next/link"
 import {
   Card,
   CardContent,
@@ -9,68 +10,90 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import {
   Award,
   TrendingUp,
   Users,
-  ExternalLink,
-  Clock,
+  Briefcase,
   Brain,
   FileUser,
+  MapPin,
+  ArrowRight
 } from "lucide-react"
 
+// --- Interfaces ---
 interface Certificate {
   is_verified: boolean;
   nsqf_level?: number | string;
-  // Add other certificate fields if needed for counting
 }
+
 interface UserData {
   name: string;
   email: string;
   certificates: Certificate[];
-  // Add other user fields like skills, connections, jobs applied if they exist on your model
 }
-const recentActivity = [
-  {
-    title: "AWS Cloud Practitioner",
-    provider: "Amazon Web Services",
-    date: "2 days ago",
-    status: "verified",
-  },
-  {
-    title: "React Advanced Patterns",
-    provider: "Frontend Masters",
-    date: "1 week ago",
-    status: "pending",
-  },
-  {
-    title: "Data Science Fundamentals",
-    provider: "Coursera",
-    date: "2 weeks ago",
-    status: "verified",
-  },
-]
+
+interface Job {
+  _id: string;
+  title: string;
+  company: string;
+  location: string;
+  jobType: string;
+  createdAt: string;
+}
 
 export function DashboardMain() {
-  const [user, setUser] = useState<UserData | null>(null) // Use UserData interface
+  const [user, setUser] = useState<UserData | null>(null)
+  const [recentJobs, setRecentJobs] = useState<Job[]>([])
   const [skillInput, setSkillInput] = useState("")
   const [loading, setLoading] = useState(false)
   const [recommendations, setRecommendations] = useState<any | null>(null)
 
-  // --- Calculation Logic using useMemo ---
-  const dynamicStats = useMemo(() => {
-    if (!user) {
-      // Return default/loading stats if user data isn't ready
-      return [];
+  // --- 1. Fetch User Data ---
+  useEffect(() => {
+    const fetchUser = async () => {
+      const token = localStorage.getItem("token")
+      if (!token) return
+
+      try {
+        const response = await fetch("/api/users/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (response.ok) {
+          const data = await response.json()
+          setUser(data.user)
+        }
+      } catch (err) {
+        console.error("Failed to fetch user:", err)
+      }
     }
-console.log(user);
+    fetchUser()
+  }, [])
+
+  // --- 2. Fetch Recent Internal Jobs (Platform Only) ---
+  useEffect(() => {
+    const fetchInternalJobs = async () => {
+      try {
+        const res = await fetch("/api/jobs?limit=3") 
+        if (res.ok) {
+          const data = await res.json()
+          setRecentJobs(Array.isArray(data.jobs) ? data.jobs : [])
+        }
+      } catch (error) {
+        console.error("Failed to load recent jobs", error)
+      }
+    }
+    fetchInternalJobs()
+  }, [])
+
+  // --- 3. Dynamic Stats Calculation ---
+  const dynamicStats = useMemo(() => {
+    if (!user) return [];
+
     const totalCerts = user.certificates?.length || 0;
     const verifiedCerts = user.certificates?.filter(c => c.is_verified).length || 0;
 
-    // --- NSQF Score Calculation ---
-    // Calculate the average NSQF level from all verified certificates
     const verifiedNsqfLevels = user.certificates
       ?.filter(c => c.is_verified && c.nsqf_level && !isNaN(Number(c.nsqf_level)))
       .map(c => Number(c.nsqf_level));
@@ -79,13 +102,8 @@ console.log(user);
     let nsqfDisplay = "N/A";
 
     if (verifiedNsqfLevels?.length > 0) {
-      // Assuming a max NSQF level of 8 for a simple percentage score
       const totalLevelSum = verifiedNsqfLevels.reduce((sum, level) => sum + level, 0);
-      const averageLevel = totalLevelSum / verifiedNsqfLevels.length;
-
-      // For display, use a simple average level or calculate a score out of 8 (Max NSQF level)
-      // Let's display the average level directly for accuracy in the context of NSQF.
-      averageNsqf = averageLevel;
+      averageNsqf = totalLevelSum / verifiedNsqfLevels.length;
       nsqfDisplay = `${averageNsqf.toFixed(1)}`;
     }
 
@@ -120,12 +138,11 @@ console.log(user);
       },
     ];
   }, [user]);
+
   const handleRecommend = async () => {
     if (!skillInput.trim()) return
-
     setLoading(true)
     setRecommendations(null)
-
     try {
       const res = await fetch("http://localhost:4500/pathway", {
         method: "POST",
@@ -136,9 +153,7 @@ console.log(user);
           jobDescription: skillInput,
         }),
       })
-
       if (!res.ok) throw new Error(`Model request failed: ${res.status}`)
-
       const data = await res.json()
       setRecommendations(data)
     } catch (err) {
@@ -148,38 +163,6 @@ console.log(user);
     }
   }
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      const token = localStorage.getItem("token")
-      if (!token) {
-        window.location.href = "/login"
-        return
-      }
-
-      try {
-        const response = await fetch("/api/users/me", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        })
-
-        if (response.ok) {
-          const data = await response.json()
-          setUser(data.user)
-        } else {
-          localStorage.removeItem("token")
-          window.location.href = "/login"
-        }
-      } catch (err) {
-        console.error("Failed to fetch user:", err)
-        localStorage.removeItem("token")
-        window.location.href = "/login"
-      }
-    }
-
-    fetchUser()
-  }, [])
-
   return (
     <div className="space-y-6 animate-fade-in-up">
       {/* Welcome Section */}
@@ -188,14 +171,13 @@ console.log(user);
           Welcome back, {user?.name}
         </h2>
         <p className="text-sm md:text-base text-muted-foreground">
-          Here&apos;s what&apos;s happening with your credentials and learning
-          journey.
+          Here&apos;s what&apos;s happening with your credentials and learning journey.
         </p>
       </div>
 
       {/* Stats Grid */}
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-        {dynamicStats.map((stat, index) => ( // Change 'stats' to 'dynamicStats'
+        {dynamicStats.map((stat, index) => (
           <Card
             key={stat.title}
             className="animate-slide-in-left"
@@ -219,56 +201,66 @@ console.log(user);
 
       {/* Recent Activity & Recommendation Model */}
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Recent Activity */}
+        
+        {/* --- RECENT ACTIVITY (Updated: Clickable Jobs) --- */}
         <Card
-          className="animate-slide-in-left"
+          className="animate-slide-in-left h-full flex flex-col"
           style={{ animationDelay: "400ms" }}
         >
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base md:text-lg">
-              <Clock className="h-5 w-5" />
-              Recent Activity
+              <Briefcase className="h-5 w-5" />
+              Recent Job Postings
             </CardTitle>
             <CardDescription className="text-xs md:text-sm">
-              Your latest credential achievements and learning progress
+              Latest opportunities posted on the platform
             </CardDescription>
           </CardHeader>
 
-          <CardContent className="space-y-4">
-            {recentActivity.map((activity, idx) => (
-              <div
-                key={idx}
-                className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg border"
-              >
-                <div className="space-y-1 min-w-0 flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h4 className="font-medium text-sm md:text-base line-clamp-1">
-                      {activity.title}
-                    </h4>
-                    <Badge
-                      variant={
-                        activity.status === "verified"
-                          ? "default"
-                          : "secondary"
-                      }
-                      className="text-xs"
-                    >
-                      {activity.status}
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {activity.provider}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {activity.date}
-                  </p>
+          <CardContent className="space-y-4 flex-1">
+            {recentJobs.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-32 text-center text-muted-foreground text-sm">
+                    <p>No internal jobs posted yet.</p>
                 </div>
+            ) : (
+                recentJobs.map((job) => (
+                <Link 
+                    key={job._id} 
+                    href={`/dashboard/jobs/${job._id}`}
+                    className="block group"
+                >
+                    <div
+                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg border hover:bg-muted/40 transition-colors cursor-pointer"
+                    >
+                        <div className="space-y-1 min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <h4 className="font-medium text-sm md:text-base line-clamp-1 group-hover:text-primary transition-colors">
+                                {job.title}
+                                </h4>
+                                <Badge variant="secondary" className="text-[10px] px-1.5 h-5">
+                                    {job.jobType}
+                                </Badge>
+                            </div>
+                            
+                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                <span className="font-medium text-foreground/80">{job.company}</span>
+                                <span className="flex items-center gap-0.5">
+                                    <MapPin className="h-3 w-3" /> {job.location}
+                                </span>
+                            </div>
+                            
+                            <p className="text-[10px] text-muted-foreground">
+                                Posted {new Date(job.createdAt).toLocaleDateString()}
+                            </p>
+                        </div>
 
-                <Button variant="ghost" size="sm">
-                  <ExternalLink className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
+                        <div className="shrink-0">
+                            <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                        </div>
+                    </div>
+                </Link>
+                ))
+            )}
           </CardContent>
         </Card>
 
@@ -280,15 +272,15 @@ console.log(user);
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base md:text-lg">
               <Brain className="h-5 w-5" />
-              AI Recommendations for courses
+              AI Recommendations
             </CardTitle>
           </CardHeader>
 
           <CardContent className="flex flex-col gap-3 flex-1">
             {/* Input */}
             <textarea
-              className="w-full p-3 border rounded-md text-sm resize-none h-[40px]"
-              placeholder="Enter your skills and experience..."
+              className="w-full p-3 border rounded-md text-sm resize-none h-[60px] bg-background"
+              placeholder="Enter your skills (e.g., React, Node.js) to get pathway suggestions..."
               value={skillInput}
               onChange={(e) => setSkillInput(e.target.value)}
             />
@@ -299,26 +291,27 @@ console.log(user);
             </Button>
 
             {/* Results */}
-            <div className="flex-1 border rounded-md p-3">
+            <div className="flex-1 border rounded-md p-3 bg-muted/20 min-h-[200px]">
               {recommendations ? (
                 <div className="space-y-1 pb-2 h-full">
-                  <h4 className="font-semibold text-sm">Recommended courses:</h4>
-
-                  <p className="text-xs text-muted-foreground">
+                  <h4 className="font-semibold text-sm">Recommended Path:</h4>
+                  <p className="text-xs text-muted-foreground mb-2">
                     Start Level: {recommendations.start_level}
                   </p>
 
-                  <div className="space-y-2 h-full overflow-y-auto pr-1">
+                  <div className="space-y-2 h-[180px] overflow-y-auto pr-1 custom-scrollbar">
                     {recommendations.pathway?.map((p: any, idx: number) => (
                       <div
                         key={idx}
-                        className="p-2 border rounded-md shadow-sm"
+                        className="p-3 border rounded-md shadow-sm bg-card"
                       >
-                        <p className="text-sm font-medium">{p.courseName}</p>
-                        <p className="text-xs text-muted-foreground">
-                          NSQF Level: {p.NSQFLevel}
-                        </p>
-                        <p className="text-xs text-muted-foreground line-clamp-2">
+                        <p className="text-sm font-medium text-primary">{p.courseName}</p>
+                        <div className="flex justify-between items-center mt-1">
+                            <p className="text-xs text-muted-foreground">
+                            NSQF Level: {p.NSQFLevel}
+                            </p>
+                        </div>
+                        <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
                           {p.syllabusCovered}
                         </p>
                       </div>
@@ -326,9 +319,9 @@ console.log(user);
                   </div>
                 </div>
               ) : (
-                <p className="text-xs text-muted-foreground text-center">
-                  No recommendations yet. Enter your skills above.
-                </p>
+                <div className="flex items-center justify-center h-full text-xs text-muted-foreground text-center">
+                  No recommendations yet. <br/> Enter your skills above.
+                </div>
               )}
             </div>
 
@@ -346,15 +339,12 @@ console.log(user);
         </CardHeader>
 
         <CardContent>
-          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
-            <Button variant="outline" className="h-20 flex-col space-y-2">
-              <Award className="h-6 w-6" />
-              <span className="text-xs md:text-sm">Add New Credential</span>
-            </Button>
-
-            <Button variant="outline" className="h-20 flex-col space-y-2">
-              <Users className="h-6 w-6" />
-              <span className="text-xs md:text-sm">Request Verification</span>
+          <div className="grid gap-4 grid-cols-1">
+            <Button asChild variant="outline" className="h-20 flex-col space-y-2 hover:bg-muted/50">
+              <Link href="/dashboard/upload">
+                <Award className="h-6 w-6" />
+                <span className="text-xs md:text-sm">Add New Credential</span>
+              </Link>
             </Button>
           </div>
         </CardContent>
