@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Menu, X, GraduationCap, Home, Award, Users, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { getUserFromToken, TokenPayload } from "@/lib/getUserFromToken"
 
 const dashboardLinks = [
   { name: "Dashboard", href: "/dashboard", icon: Home },
@@ -16,11 +17,45 @@ const dashboardLinks = [
 export function Navigation() {
   const [isOpen, setIsOpen] = useState(false)
   const [isSignedIn, setIsSignedIn] = useState(false)
-
+  const [user, setUser] = useState<TokenPayload | null>(null);
+  const [isPremium, setIsPremium] = useState<boolean>(false);
   useEffect(() => {
-    const token = localStorage.getItem("token")
-    setIsSignedIn(!!token)
-  }, [])
+    // 1. Define an async function inside useEffect
+    const checkUserStatus = async () => {
+      const token = localStorage.getItem("token");
+
+      // If there's no token, we can stop here.
+      if (!token) {
+        setIsSignedIn(false);
+        setUser(null);
+        return;
+      }
+
+      // 2. Call an API endpoint (e.g., /api/user/me) to securely validate the token
+      // and get the user data.
+      const userData = await fetch("/api/users/me", {
+        headers: { Authorization: `Bearer ${token}` },
+      }).then(res => {
+        if (!res.ok) return null;
+        return res.json();
+      })
+
+      if (userData) {
+        setIsSignedIn(true);
+        setUser(userData);
+        // 3. Log the user object
+        console.log("Logged In User:", userData);
+        setIsPremium(userData.user.isPremium);
+      } else {
+        setIsSignedIn(false);
+        setUser(prev => (prev ? { ...prev, isPremium: true } : prev));
+        // Optionally clear an invalid token
+        localStorage.removeItem("token");
+      }
+    };
+
+    checkUserStatus();
+  }, []);
 
   return (
     <nav className="fixed top-0 w-full bg-background/80 backdrop-blur-md border-b border-border z-50">
@@ -34,6 +69,14 @@ export function Navigation() {
             <GraduationCap className="h-8 w-8 text-primary" />
             <span className="font-bold text-xl">Certi-fi</span>
           </div>
+          {!isPremium&&<Link href="/pricing" className="inline-flex items-center gap-2
+  bg-purple-600 text-white text-xs font-bold uppercase tracking-wide
+  px-4 py-1.5 rounded-xl
+  ring-2 ring-purple-400/50
+  hover:bg-purple-700 transition cursor-pointer">
+            ✨ Go Pro
+          </Link>}
+
 
           {/* Desktop nav */}
           <div className="hidden md:flex items-center space-x-6">
@@ -62,7 +105,7 @@ export function Navigation() {
               </>
             )}
             <ThemeToggle />
-            {!isSignedIn&&<Link href={"/register"}><Button>Get Started</Button></Link>}
+            {!isSignedIn && <Link href={"/register"}><Button>Get Started</Button></Link>}
           </div>
 
           {/* Mobile nav trigger */}
@@ -81,28 +124,28 @@ export function Navigation() {
           <div className="px-2 pt-2 pb-3 space-y-1 bg-background border-b border-border">
             {isSignedIn
               ? dashboardLinks.map((link) => (
-                  <Link
-                    key={link.name}
-                    href={link.href}
-                    className="flex items-center gap-2 px-3 py-2 text-muted-foreground hover:text-foreground"
-                  >
-                    <link.icon className="h-4 w-4" />
-                    {link.name}
-                  </Link>
-                ))
+                <Link
+                  key={link.name}
+                  href={link.href}
+                  className="flex items-center gap-2 px-3 py-2 text-muted-foreground hover:text-foreground"
+                >
+                  <link.icon className="h-4 w-4" />
+                  {link.name}
+                </Link>
+              ))
               : [
-                  { name: "Features", href: "#features" },
-                  { name: "How it Works", href: "#how-it-works" },
-                  { name: "Benefits", href: "#benefits" },
-                ].map((link) => (
-                  <Link
-                    key={link.name}
-                    href={link.href}
-                    className="block px-3 py-2 text-muted-foreground hover:text-foreground"
-                  >
-                    {link.name}
-                  </Link>
-                ))}
+                { name: "Features", href: "#features" },
+                { name: "How it Works", href: "#how-it-works" },
+                { name: "Benefits", href: "#benefits" },
+              ].map((link) => (
+                <Link
+                  key={link.name}
+                  href={link.href}
+                  className="block px-3 py-2 text-muted-foreground hover:text-foreground"
+                >
+                  {link.name}
+                </Link>
+              ))}
             <div className="px-3 py-2">
               <Button className="w-full">Get Started</Button>
             </div>

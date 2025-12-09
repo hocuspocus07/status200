@@ -11,6 +11,7 @@ export type TokenPayload = {
   isEmployee?: boolean;
   iat?: number;
   exp?: number;
+  isPremium?:boolean
 };
 
 export async function getUserFromToken(req: NextRequest): Promise<TokenPayload | null> {

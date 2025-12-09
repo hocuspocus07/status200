@@ -32,6 +32,7 @@ export async function GET(req: NextRequest) {
         socials: user.socials,
         isEmployee: user.isEmployee ?? false,
         certificates:user.certificates,
+        isPremium:user.isPremium??false
       },
     });
 

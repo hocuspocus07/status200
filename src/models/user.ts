@@ -14,6 +14,7 @@ export interface IUser extends Document {
   isPublic: boolean;
   isEmployee?: boolean;   // ← NEW FIELD
   skills?: string[];
+  isPremium?:boolean;
   profile?: {
     avatar?: string;
     username?: string;
@@ -56,6 +57,7 @@ const UserSchema = new Schema<IUser>(
       website: String,
     },
     skills: { type: [String], default: [] },
+    isPremium:{type:Boolean,default:false},
     educations: [EducationSchema],
     certificates: [CertificateSchema],
   },
