@@ -86,6 +86,7 @@ interface UserProfile {
     website?: string;
   };
   isPublic?: boolean;
+  isPremium?: boolean;
 }
 
 type ConnectionStatus =
@@ -128,15 +129,15 @@ export default function UserProfilePage() {
 
     setIsDownloading(true);
     const apiEndpoint = '/api/report';
-const certData = user.certificates
-  .map(cert => {
-    return {
-      url: cert.bucket_image_url,
-      name: cert.course,
-      id:cert._id,
-    };
-  })
-  .filter(c => c.url);
+    const certData = user.certificates
+      .map(cert => {
+        return {
+          url: cert.bucket_image_url,
+          name: cert.course,
+          id: cert._id,
+        };
+      })
+      .filter(c => c.url);
     if (certData.length === 0) {
       toast.warning("Certificate images are missing.");
       setIsDownloading(false);
@@ -151,7 +152,7 @@ const certData = user.certificates
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({certificates: certData }),
+        body: JSON.stringify({ certificates: certData }),
       });
       if (!response.ok) {
         const errorText = await response.text();
@@ -293,31 +294,31 @@ const certData = user.certificates
         }
 
         const { connections } = await connRes.json();
-const { requests: pendingRequests } = await pendingRes.json();
-const { requests: sentRequests } = await sentRes.json();
+        const { requests: pendingRequests } = await pendingRes.json();
+        const { requests: sentRequests } = await sentRes.json();
 
-// 1. Check accepted connections (c.user could be null)
-const accepted = connections.find((c: any) => c.user?._id === profileUserId);
-if (accepted) {
-  setConnectionStatus("connected");
-  setConnectionId(accepted.connectionId);
-  return;
-}
+        // 1. Check accepted connections (c.user could be null)
+        const accepted = connections.find((c: any) => c.user?._id === profileUserId);
+        if (accepted) {
+          setConnectionStatus("connected");
+          setConnectionId(accepted.connectionId);
+          return;
+        }
 
-// 2. Check pending-in requests (r.requester could be null)
-const pendingIn = pendingRequests.find((r: any) => r.requester?._id === profileUserId);
-if (pendingIn) {
-  setConnectionStatus("pending-in");
-  setConnectionId(pendingIn._id);
-  return;
-}
+        // 2. Check pending-in requests (r.requester could be null)
+        const pendingIn = pendingRequests.find((r: any) => r.requester?._id === profileUserId);
+        if (pendingIn) {
+          setConnectionStatus("pending-in");
+          setConnectionId(pendingIn._id);
+          return;
+        }
 
-// 3. Check pending-out requests (r.recipient could be null)
-const pendingOut = sentRequests.find((r: any) => r.recipient?._id === profileUserId);
-if (pendingOut) {
-  setConnectionStatus("pending-out");
-  return;
-}
+        // 3. Check pending-out requests (r.recipient could be null)
+        const pendingOut = sentRequests.find((r: any) => r.recipient?._id === profileUserId);
+        if (pendingOut) {
+          setConnectionStatus("pending-out");
+          return;
+        }
         // If none match, there is no connection
         setConnectionStatus("none");
 
@@ -493,9 +494,9 @@ if (pendingOut) {
   return (
     <main className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100">
       <div className="w-full max-w-7xl mx-auto">
-        <div className="relative h-48 md:h-64">
+        <div className={`relative h-48 md:h-64`}>
           <div
-            className="absolute inset-0 bg-cover bg-center rounded-b-lg"
+            className={`absolute inset-0 bg-cover bg-center rounded-b-lg`}
             style={{ backgroundImage: `url(${coverUrl})` }}
           />
           <a href="/dashboard/network" className="absolute top-4 left-4 z-10">
@@ -511,7 +512,7 @@ if (pendingOut) {
 
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
           <div className="relative flex items-end justify-between -mt-20 md:-mt-24">
-            <Avatar className="h-32 w-32 md:h-40 md:w-40 border-4 border-white dark:border-gray-950 rounded-full shadow-lg">
+            <Avatar className={`h-32 w-32 md:h-40 md:w-40 border-4 rounded-full shadow-lg ${user.isPremium ? "ring-4 ring-yellow-400" : "border-white dark:border-gray-800"}`}>
               <AvatarImage src={avatarUrl} alt={user.name} />
               <AvatarFallback className="text-4xl">{avatarFallback}</AvatarFallback>
             </Avatar>
@@ -524,7 +525,10 @@ if (pendingOut) {
           </div>
 
           <div className="mt-6">
-            <h1 className="text-3xl md:text-4xl font-bold">{user.name}</h1>
+            <h1 className="text-3xl md:text-4xl font-bold">
+              {user.name}
+              {user.isPremium && (<span className="ml-2 text-lg text-yellow-400 px-4 py-2 border-2 border-yellow-400 rounded-lg">PRO</span>)}
+              </h1>
             <p className="text-xl mt-1 text-gray-800 dark:text-gray-200">
               {user.headline || (user.skills?.length ? user.skills.join(" | ") : "Learner & Developer")}
             </p>

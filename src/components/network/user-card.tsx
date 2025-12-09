@@ -205,7 +205,7 @@ export function UserListItem({
             {/* Name and Verification - Font size reduced, margin removed */}
             <div className="flex items-center gap-1">
               <Link href={`/dashboard/profiles/${user._id}`} className="text-base font-bold text-foreground hover:text-primary transition-colors truncate">
-                {user.name} {user.isPremium && <span className="text-yellow-500 border-2 border-yellow-500 p-0.5 rounded-sm text-xs font-semibold">PRO</span>}
+                {user.name} {user.isPremium && <span className="text-yellow-500 border-2 border-yellow-500 px-1 py-0.5 rounded-sm text-xs font-semibold">PRO</span>}
               </Link>
               {user.isVerified && isProfilePublic && (
                 <CheckCircle className="h-3 w-3 text-primary" />
@@ -261,7 +261,7 @@ export function UserListItem({
         {/* Right Section: Action Buttons - Aligned tightly */}
         <div className="flex flex-col items-end justify-center gap-1 flex-shrink-0">
           {/* View Profile Button - height reduced to h-8 */}
-          <Button variant="outline" asChild className="w-[100px] sm:w-[120px] px-3 h-8 text-sm">
+          <Button variant="outline" asChild className="w-[120px] sm:w-[140px] px-3 h-8 text-sm">
             <Link href={`/dashboard/profiles/${user._id}`}>Profile</Link>
           </Button>
 
