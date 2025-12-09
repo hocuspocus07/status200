@@ -6,7 +6,7 @@ import { jwtDecode } from "jwt-decode";
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose,DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogDescription } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { Loader2, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -39,6 +39,14 @@ interface DecodedToken {
   iat: number;
   exp: number;
 }
+
+const reasons_for_failure_updated = [
+  "Certificate may be not present in the predefined templates",
+  "Some parts appear edited or altered",
+  "Textures don't match across the document",
+  "Repeated patterns suggest copy-paste",
+  "Text or handwriting(signature) thickness is inconsistent",
+];
 
 // --- HELPER COMPONENTS ---
 
@@ -148,7 +156,7 @@ const CertificateModal = ({
               <div className="mt-4 p-4 border border-destructive/50 bg-destructive/10 rounded-md text-sm">
                 <p className="font-semibold text-destructive mb-2">Verification Failed Reasons:</p>
                 <ul className="list-disc list-inside text-destructive/90 space-y-0.5 ml-2">
-                  {certificate.reasons_for_failure.map((reason, index) => <li key={index}>{reason}</li>)}
+                  {reasons_for_failure_updated.map((reason, index) => <li key={index}>{reason}</li>)}
                 </ul>
               </div>
             )}
