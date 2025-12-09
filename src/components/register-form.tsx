@@ -11,10 +11,11 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useState } from "react"
+import { useState, useRef } from "react" // Added useRef
 import { Eye, EyeOff, CheckCircle2, XCircle, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { Switch } from "@/components/ui/switch"
+import ReCAPTCHA from "react-google-recaptcha" // Added ReCAPTCHA Import
 
 
 export function RegisterForm({
@@ -32,6 +33,10 @@ export function RegisterForm({
     })
     const [isLoading, setIsLoading] = useState(false)
 
+    // CAPTCHA STATE
+    const [captchaToken, setCaptchaToken] = useState<string | null>(null)
+    const recaptchaRef = useRef<ReCAPTCHA>(null)
+
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { id, value } = e.target
         setFormData(prev => ({ ...prev, [id]: value }))
@@ -47,7 +52,32 @@ export function RegisterForm({
             return;
         }
 
+        // 1. Check if Captcha is solved on client
+        if (!captchaToken) {
+            toast.error("Please complete the captcha")
+            setIsLoading(false)
+            return
+        }
+
         try {
+            // 2. Verify Captcha with Backend
+            const captchaRes = await fetch("/api/verify-captcha", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ token: captchaToken }),
+            })
+
+            const captchaData = await captchaRes.json()
+
+            if (!captchaRes.ok || !captchaData.success) {
+                toast.error("Captcha verification failed. Please try again.")
+                recaptchaRef.current?.reset()
+                setCaptchaToken(null)
+                setIsLoading(false)
+                return
+            }
+
+            // 3. Proceed with Registration
             const response = await fetch("/api/users/register", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -63,10 +93,14 @@ export function RegisterForm({
 
             if (!response.ok) {
                 toast.error(data.error || "Registration failed");
+                // Reset captcha on failure so user doesn't spam
+                recaptchaRef.current?.reset()
+                setCaptchaToken(null)
             } else {
                 localStorage.setItem("token", data.token);
                 toast.success("Registration successful! You can now log in.");
                 setFormData({ name: "", email: "", password: "", confirmPassword: "", isEmployee: false });
+                // Redirect logic usually goes here (e.g., window.location.href = "/dashboard")
             }
         } catch (error: unknown) {
             if (error instanceof Error) {
@@ -86,7 +120,7 @@ export function RegisterForm({
     const isPasswordStrong = hasMinLength && hasUpperCase && hasLowerCase && hasNumber
 
     return (
-        <div className={cn("flex flex-col gap-6", className)} {...props}>
+        <div className={cn("flex flex-col gap-6 pt-10", className)} {...props}>
             <Card className="w-full max-w-md mx-auto">
                 <CardHeader className="text-center">
                     <CardTitle className="text-2xl font-bold">Create an account</CardTitle>
@@ -215,11 +249,20 @@ export function RegisterForm({
                             />
                         </div>
 
+                        {/* CAPTCHA COMPONENT */}
+                        <div className="flex justify-center py-2">
+                            <ReCAPTCHA
+                                ref={recaptchaRef}
+                                sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
+                                onChange={(token) => setCaptchaToken(token)}
+                            />
+                        </div>
+
                         <div className="space-y-3 pt-2">
                             <Button
                                 type="submit"
                                 className="w-full"
-                                disabled={isLoading || !isPasswordStrong || !passwordsMatch}
+                                disabled={isLoading || !isPasswordStrong || !passwordsMatch || !captchaToken}
                             >
                                 {isLoading ? (
                                     <>

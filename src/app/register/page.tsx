@@ -7,6 +7,7 @@ export default function Page() {
       <Navigation/>
       <div className="w-full max-w-sm">
         <RegisterForm />
+        
       </div>
     </div>
   )

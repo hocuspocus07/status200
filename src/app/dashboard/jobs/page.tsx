@@ -145,7 +145,7 @@ export default function JobsBrowsePage() {
     }));
 
     setAllJobs([...internalJobsNormalized, ...externalJobsNormalized]);
-  }, [jobs, externalJobs])
+  }, [jobs, externalJobs]);
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -174,7 +174,7 @@ export default function JobsBrowsePage() {
             <Briefcase className="h-6 w-6" />
             <p className="text-sm font-medium uppercase tracking-wide">Opportunities</p>
           </div>
-          <h1 className="text-2xl md:text-3xl font-semibold">Jobs curated for you</h1>
+          <h1 className="text-2xl md:text-3xl font-semibold">Find Your Dream Job Now</h1>
           <p className="text-sm text-muted-foreground">
             Discover open roles from verified employers on Certi-fi and apply directly with your profile.
           </p>
@@ -190,7 +190,7 @@ export default function JobsBrowsePage() {
             <form className="space-y-4" onSubmit={handleSubmit}>
               <div className="flex flex-col gap-3 md:flex-row">
                 <div className="flex-1 flex items-center gap-2 rounded-md border px-3 py-2">
-                  <Search className="h-4 w-4 text-muted-foreground" />
+                  <Search className="h-4 w-4" />
                   <Input
                     className="border-0 focus-visible:ring-0 px-0"
                     placeholder="Search title, company, or keywords"
@@ -245,13 +245,15 @@ export default function JobsBrowsePage() {
               </CardHeader>
             </Card>
           ) : (
-            allJobs.map((job) => (
+            allJobs.map((job, idx) => (
               <Card key={job._id} className="hover:border-primary/60 transition-colors">
                 <CardHeader className="space-y-1">
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <CardTitle className="text-xl">
-                        {job.title} {job.isExternal && <span className="text-sm text-muted-foreground">(external)</span>}
+                        {job.title}
+                        {idx < 3 && !job.isExternal && <span className="ml-2 inline-block rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">New</span>}
+                        {job.isExternal && <span className="text-sm text-muted-foreground"> (external)</span>}
                       </CardTitle>
                       <CardDescription className="flex flex-wrap items-center gap-2">
                         <span className="font-medium text-foreground">{job.company}</span>
@@ -314,4 +316,3 @@ export default function JobsBrowsePage() {
     </main>
   )
 }
-

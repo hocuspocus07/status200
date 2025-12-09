@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import {
   Card,
   CardContent,
@@ -18,39 +18,20 @@ import {
   ExternalLink,
   Clock,
   Brain,
+  FileUser,
 } from "lucide-react"
 
-const stats = [
-  {
-    title: "Total Certificates",
-    value: "24",
-    change: "+3 this month",
-    icon: Award,
-    color: "text-blue-600",
-  },
-  {
-    title: "Skill Score",
-    value: "87%",
-    change: "+5% from last month",
-    icon: TrendingUp,
-    color: "text-green-600",
-  },
-  {
-    title: "Network Connections",
-    value: "156",
-    change: "+12 new connections",
-    icon: Users,
-    color: "text-purple-600",
-  },
-  {
-    title: "Number of Jobs applied",
-    value: "15",
-    change: "+4 new applications",
-    icon: Users,
-    color: "text-purple-600",
-  },
-]
-
+interface Certificate {
+  is_verified: boolean;
+  nsqf_level?: number | string;
+  // Add other certificate fields if needed for counting
+}
+interface UserData {
+  name: string;
+  email: string;
+  certificates: Certificate[];
+  // Add other user fields like skills, connections, jobs applied if they exist on your model
+}
 const recentActivity = [
   {
     title: "AWS Cloud Practitioner",
@@ -73,11 +54,72 @@ const recentActivity = [
 ]
 
 export function DashboardMain() {
-  const [user, setUser] = useState<{ name: string; email: string } | null>(null)
+  const [user, setUser] = useState<UserData | null>(null) // Use UserData interface
   const [skillInput, setSkillInput] = useState("")
   const [loading, setLoading] = useState(false)
   const [recommendations, setRecommendations] = useState<any | null>(null)
 
+  // --- Calculation Logic using useMemo ---
+  const dynamicStats = useMemo(() => {
+    if (!user) {
+      // Return default/loading stats if user data isn't ready
+      return [];
+    }
+console.log(user);
+    const totalCerts = user.certificates?.length || 0;
+    const verifiedCerts = user.certificates?.filter(c => c.is_verified).length || 0;
+
+    // --- NSQF Score Calculation ---
+    // Calculate the average NSQF level from all verified certificates
+    const verifiedNsqfLevels = user.certificates
+      ?.filter(c => c.is_verified && c.nsqf_level && !isNaN(Number(c.nsqf_level)))
+      .map(c => Number(c.nsqf_level));
+
+    let averageNsqf = 0;
+    let nsqfDisplay = "N/A";
+
+    if (verifiedNsqfLevels?.length > 0) {
+      // Assuming a max NSQF level of 8 for a simple percentage score
+      const totalLevelSum = verifiedNsqfLevels.reduce((sum, level) => sum + level, 0);
+      const averageLevel = totalLevelSum / verifiedNsqfLevels.length;
+
+      // For display, use a simple average level or calculate a score out of 8 (Max NSQF level)
+      // Let's display the average level directly for accuracy in the context of NSQF.
+      averageNsqf = averageLevel;
+      nsqfDisplay = `${averageNsqf.toFixed(1)}`;
+    }
+
+    return [
+      {
+        title: "Total Credentials",
+        value: totalCerts.toString(),
+        change: `${verifiedCerts} Verified`,
+        icon: Award,
+        color: totalCerts > 0 ? "text-blue-600" : "text-gray-400",
+      },
+      {
+        title: "Avg. NSQF Level",
+        value: nsqfDisplay,
+        change: `Based on ${verifiedCerts} items`,
+        icon: TrendingUp,
+        color: averageNsqf >= 6 ? "text-green-600" : "text-yellow-600",
+      },
+      {
+        title: "Network Connections",
+        value: "15",
+        change: "+1 in 24h",
+        icon: Users,
+        color: "text-green-600",
+      },
+      {
+        title: "Jobs Applied",
+        value: "3",
+        change: "+2 in 24h",
+        icon: FileUser,
+        color: "text-green-600",
+      },
+    ];
+  }, [user]);
   const handleRecommend = async () => {
     if (!skillInput.trim()) return
 
@@ -152,8 +194,8 @@ export function DashboardMain() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-3">
-        {stats.map((stat, index) => (
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+        {dynamicStats.map((stat, index) => ( // Change 'stats' to 'dynamicStats'
           <Card
             key={stat.title}
             className="animate-slide-in-left"
@@ -232,24 +274,20 @@ export function DashboardMain() {
 
         {/* Recommendation AI Box */}
         <Card
-          className="animate-slide-in-right h-[350px] flex flex-col"
+          className="animate-slide-in-right h-full flex flex-col"
           style={{ animationDelay: "400ms" }}
         >
-          <CardHeader className="pb-3">
+          <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base md:text-lg">
               <Brain className="h-5 w-5" />
               AI Recommendations for courses
             </CardTitle>
-            <CardDescription className="text-xs md:text-sm">
-              Enter your skills and experience to get personalized pathway
-              recommendations
-            </CardDescription>
           </CardHeader>
 
           <CardContent className="flex flex-col gap-3 flex-1">
             {/* Input */}
             <textarea
-              className="w-full p-3 border rounded-md text-sm resize-none h-[70px]"
+              className="w-full p-3 border rounded-md text-sm resize-none h-[40px]"
               placeholder="Enter your skills and experience..."
               value={skillInput}
               onChange={(e) => setSkillInput(e.target.value)}
@@ -261,32 +299,30 @@ export function DashboardMain() {
             </Button>
 
             {/* Results */}
-            <div className="flex-1 overflow-y-auto border rounded-md p-3 bg-muted/20">
+            <div className="flex-1 border rounded-md p-3">
               {recommendations ? (
-                <div className="space-y-3 pb-2">
-                  <h4 className="font-semibold text-sm">Recommended Pathway:</h4>
+                <div className="space-y-1 pb-2 h-full">
+                  <h4 className="font-semibold text-sm">Recommended courses:</h4>
 
                   <p className="text-xs text-muted-foreground">
                     Start Level: {recommendations.start_level}
                   </p>
 
-                  <div className="space-y-2">
-                    {recommendations.pathway?.map(
-                      (p: any, idx: number) => (
-                        <div
-                          key={idx}
-                          className="p-2 border rounded-md bg-background shadow-sm"
-                        >
-                          <p className="text-sm font-medium">{p.courseName}</p>
-                          <p className="text-xs text-muted-foreground">
-                            NSQF Level: {p.NSQFLevel}
-                          </p>
-                          <p className="text-xs text-muted-foreground line-clamp-2">
-                            {p.syllabusCovered}
-                          </p>
-                        </div>
-                      )
-                    )}
+                  <div className="space-y-2 h-full overflow-y-auto pr-1">
+                    {recommendations.pathway?.map((p: any, idx: number) => (
+                      <div
+                        key={idx}
+                        className="p-2 border rounded-md shadow-sm"
+                      >
+                        <p className="text-sm font-medium">{p.courseName}</p>
+                        <p className="text-xs text-muted-foreground">
+                          NSQF Level: {p.NSQFLevel}
+                        </p>
+                        <p className="text-xs text-muted-foreground line-clamp-2">
+                          {p.syllabusCovered}
+                        </p>
+                      </div>
+                    ))}
                   </div>
                 </div>
               ) : (
@@ -295,6 +331,7 @@ export function DashboardMain() {
                 </p>
               )}
             </div>
+
           </CardContent>
         </Card>
       </div>
