@@ -113,10 +113,19 @@ export default function VerifyPage() {
     const name = form.getValues("name");
     const syllabus = form.getValues("syllabus");
     const jobs = form.getValues("jobs");
+    // 1. Get duration from form
+    const durationStr = form.getValues("duration");
+    const duration = parseFloat(durationStr || "0");
 
     if (!name) { toast.error("Course/Certificate name is required"); return; }
     if (!syllabus) { toast.error("Syllabus is required"); return; }
     if (!jobs) { toast.error("Job roles you are looking for are required"); return; }
+
+    // 2. Validate duration (> 7.5 hours) for PREDICTION
+    if (isNaN(duration) || duration <= 7.5) {
+      toast.error("Course duration must be greater than 7.5 hours to calculate NSQF level.");
+      return; 
+    }
 
     let submissionToastId: string | number | undefined;
 
@@ -129,9 +138,6 @@ export default function VerifyPage() {
       formData["syllabusCovered"] = syllabus;
       formData["jobDescription"] = jobs;
 
-      // console.log("[debug]: NSQF model request payload:", formData);
-      // console.log("[debug]: NSQF model request payload:", JSON.stringify(formData));
-
       const response = await fetch(`${NSQF_MODEL_URL}/predict`, {
         method: "POST",
         body: JSON.stringify(formData),
@@ -142,11 +148,17 @@ export default function VerifyPage() {
       });
 
       const result = await response.json();
-      // console.log("[debug]: NSQF model response:", result);
       if (!response.ok) throw new Error(result.error || "Submission failed");
 
-      const { predicted_nsqf, doubled_int, keywords, tags } = result as NsqfResponse;
+      let { predicted_nsqf, doubled_int, keywords, tags } = result as NsqfResponse;
       if (!predicted_nsqf || !doubled_int) throw new Error("Invalid response from NSQF model");
+
+      // 3. Apply NSQF Adjustment Logic based on Duration (Boost logic lives here)
+      if (duration > 70) {
+        predicted_nsqf += 4;
+      } else if (duration > 30) {
+        predicted_nsqf += 2;
+      }
 
       setNsqfLevel({ predicted_nsqf, doubled_int, keywords, tags });
       form.setValue("nsqf_level_display", predicted_nsqf.toString());
@@ -162,7 +174,6 @@ export default function VerifyPage() {
     }
   };
 
-  // ✅ UPDATED: onSubmit now sends all required fields for both ML models
   const onSubmit = async (values: VerifyValues) => {
     console.log("[debug]: current certifMedium:", certifMedium);
     if (!values.name) { toast.error("Course/Certificate name is required"); return; }
@@ -175,15 +186,20 @@ export default function VerifyPage() {
     if (!nsqfLevel.predicted_nsqf) { toast.error("Please fetch your NSQF level before submitting."); return; }
     if (!file) { toast.error("Please upload your image certificate."); return; }
 
+    const durationVal = parseFloat(values.duration || "0");
+    if (isNaN(durationVal) || durationVal <= 7.5) {
+      toast.error("Course duration must be greater than 7.5 hours.");
+      return;
+    }
+
     setSubmitting(true);
     let submissionToastId: string | number | undefined;
 
     try {
-      const token = localStorage.getItem("token"); // ⚠️ Replace with your actual key
+      const token = localStorage.getItem("token"); 
       if (!token) throw new Error("Authentication token not found. Please log in.");
 
       const formData = new FormData();
-      // --- Data for ML Model 1 (Image) and general info ---
       formData.append("certificate", file);
       formData.append("course", values.name);
       formData.append("issued_to", values.issued_to);
@@ -191,21 +207,24 @@ export default function VerifyPage() {
       formData.append("passed_at", values.passed_at);
       formData.append("verification_link", values.verification_link as string);
 
-      // --- ADDED: Data for ML Model 2 (Text Analysis) ---
       formData.append("syllabus", values.syllabus);
       formData.append("outcomes", values.outcomes);
       formData.append("jobs", values.jobs);
 
-      // Append optional fields only if they have a value
-      if (values.duration) formData.append("duration", values.duration);
+      // ✅ FIX 1: Send 'course_duration' to match backend schema (was sending 'duration')
+      if (values.duration) {
+        formData.append("course_duration", values.duration);
+      }
+      
       if (values.credits) formData.append("credits", values.credits.toString());
       if (values.projects) formData.append("projects", values.projects);
 
-      // setting up the certif_medium
       formData.append("certif_medium", certifMedium);
 
-      // updated nsqf_level related fields
+      // ✅ FIX 2: Use the value directly from state (already calculated in fetchNsqfLevel)
+      // Removed the duplicate logic that was adding +2/+4 again.
       formData.append("nsqf_level", nsqfLevel.predicted_nsqf.toString());
+
       formData.append("confidence", nsqfLevel.doubled_int?.toString() || "0");
       formData.append("tags", JSON.stringify(nsqfLevel.tags || []));
       formData.append("keywords", JSON.stringify(nsqfLevel.keywords || []));
@@ -240,7 +259,6 @@ export default function VerifyPage() {
   };
 
   return (
-    // Your JSX remains the same
     <>
       <VerificationResultDialog
         isOpen={isResultModalOpen}
@@ -328,8 +346,8 @@ export default function VerifyPage() {
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <FormField control={form.control} name="duration" render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Duration</FormLabel>
-                        <FormControl><Input placeholder="e.g. 6 months" {...field} /></FormControl>
+                        <FormLabel>Duration (Hours)</FormLabel>
+                        <FormControl><Input type="number" step="0.1" placeholder="e.g. 40" {...field} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )} />
@@ -428,37 +446,23 @@ export default function VerifyPage() {
         open={digilockerOpen}
         onOpenChange={setDigilockerOpen}
         onCertificateSelect={(cert) => {
-          console.log("[debug]: certificate loaded from digilocker");
           if (cert?.file) {
             try {
-              // Convert Base64 Data URI to File object
               const arr = cert.file.split(',');
               const mime = arr[0].match(/:(.*?);/)?.[1] || cert.contentType || 'image/png';
               const bstr = atob(arr[1]);
               let n = bstr.length;
               const u8arr = new Uint8Array(n);
-
               while (n--) {
                 u8arr[n] = bstr.charCodeAt(n);
               }
-
               const extension = mime.split('/')[1] || 'png';
               const filename = `${cert.name || 'digilocker-certificate'}.${extension}`;
               const fileObj = new File([u8arr], filename, { type: mime });
-
-              // DEBUG: Visualize the constructed file in a new tab
-              // const debugUrl = URL.createObjectURL(fileObj);
-              // console.log("Debug File URL:", debugUrl);
-              // window.open(debugUrl, "_blank");
-              // DEBUG: Visualize the constructed file in a new tab
-
               setFile(fileObj);
-
-              // Optional: Pre-fill the name if available
               if (cert.name) {
                 form.setValue("issued_to", cert.name);
               }
-
               toast.success("Certificate loaded from Digilocker");
               setCertifMedium("digilocker");
             } catch (error) {

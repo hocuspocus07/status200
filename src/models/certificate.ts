@@ -20,6 +20,7 @@ export interface ICertificate extends Document {
   syllabus?: string;
   outcomes?: string;
   jobs?: string;
+  course_duration?: number;
   certif_medium?: "upload" | "digilocker";
 
   createdAt: Date;
@@ -48,6 +49,7 @@ export const CertificateSchema = new Schema<ICertificate>({
   syllabus: { type: String },
   outcomes: { type: String },
   jobs: { type: String },
+  course_duration: { type: Number },
   certif_medium: { type: String, enum: ["upload", "digilocker"] },
 
   createdAt: { type: Date, default: Date.now },

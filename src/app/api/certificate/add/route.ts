@@ -137,8 +137,15 @@ export async function POST(req: NextRequest) {
     const syllabus = formData.get("syllabus") as string;
     const outcomes = formData.get("outcomes") as string;
     const jobs = formData.get("jobs") as string;
+  let course_duration_raw = formData.get("course_duration") as string | null;
+let course_duration = undefined;
 
-    // Retrieve NSQF analysis results from form data
+if (course_duration_raw) {
+  const num = Number(course_duration_raw);
+  if (!isNaN(num)) course_duration = num;
+}
+
+     // Retrieve NSQF analysis results from form data
     const analysisResult = {
       nsqf_level: formData.get("nsqf_level") as string,
       confidence: parseFloat(formData.get("confidence") as string) || 0,
@@ -240,6 +247,7 @@ export async function POST(req: NextRequest) {
       syllabus,
       outcomes,
       jobs,
+      course_duration,
       certif_medium,
 
       // are_claims_verified: claimsVerified.are_claims_verified,

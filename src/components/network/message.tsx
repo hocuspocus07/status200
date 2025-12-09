@@ -9,7 +9,8 @@ import { Separator } from "@/components/ui/separator"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Check, CheckCheck } from "lucide-react"
 import { ProfileSheet } from "./profile-sheet"
-import { ProfileData } from "./types"
+import { ProfileData } from "./types" // Shared types
+
 type ChatMessage = { id: string; role: "me" | "them"; text: string; ts: number; read?: boolean }
 
 export function MessageDialog({
@@ -33,18 +34,17 @@ export function MessageDialog({
     useEffect(() => {
         const fetchUser = async () => {
             const token = localStorage.getItem("token")
-            if (!token) return window.location.href = "/login"
+            if (!token) return // Handle redirect elsewhere if needed
 
             try {
                 const response = await fetch("/api/users/me", {
                     headers: { 'Authorization': `Bearer ${token}` },
                 })
-                if (!response.ok) return window.location.href = "/login"
+                if (!response.ok) return 
                 const data = await response.json()
                 setSignedInUser(data.user)
             } catch {
                 localStorage.removeItem("token")
-                window.location.href = "/login"
             }
         }
         fetchUser()
@@ -100,16 +100,16 @@ export function MessageDialog({
                         <>
                             {/* Header */}
                             <div
-                                className="flex items-center gap-3 p-4 bg-muted/10 border-b cursor-pointer"
+                                className="flex items-center gap-3 p-4 bg-muted/10 border-b cursor-pointer hover:bg-muted/20 transition-colors"
                             >
                                 <Avatar className="h-10 w-10" onClick={() => setProfileUser(user)}>
-                                    <AvatarImage src={user.avatar || "/placeholder.svg"} />
+                                    <AvatarImage src={user.profile?.avatar || "/placeholder.svg"} />
                                     <AvatarFallback>{user.name.slice(0, 2).toUpperCase()}</AvatarFallback>
                                 </Avatar>
 
                                 <div onClick={() => setProfileUser(user)} className="flex flex-col">
                                     <p className="font-semibold">{user.name}</p>
-                                    <p className="text-xs text-muted-foreground">{user.title}</p>
+                                    <p className="text-xs text-muted-foreground">{user.headline || user.title}</p>
                                 </div>
                             </div>
 
@@ -125,7 +125,7 @@ export function MessageDialog({
                                                 <span className="text-sm">{m.text}</span>
                                                 {/* Ticks */}
                                                 {m.role === "me" && (
-                                                    <span>{m.read ? <CheckCheck className="w-4 h-4 text-blue-500" /> : <Check className="w-4 h-4 text-muted-foreground" />}</span>
+                                                    <span>{m.read ? <CheckCheck className="w-3 h-3 text-blue-300" /> : <Check className="w-3 h-3 text-primary-foreground/70" />}</span>
                                                 )}
                                             </div>
                                         </div>
@@ -144,14 +144,15 @@ export function MessageDialog({
                 </DialogContent>
             </Dialog>
 
-            {/* Profile Popup */}
+            {/* Profile Popup (nested inside message dialog logic) */}
             <ProfileSheet
                 user={profileUser}
                 onOpenChange={(open) => {
                     if (!open) setProfileUser(null) // close profile
                 }}
                 onMessage={() => {
-                    if (profileUser) setChatUser(profileUser)
+                    // Already inside message dialog, just close profile
+                    setProfileUser(null);
                 }}
             />
 

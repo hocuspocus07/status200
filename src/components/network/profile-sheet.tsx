@@ -5,8 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { ProfileData } from "./types";
-import type { Certificate } from "./types";
+import { ProfileData, Certificate } from "./types"; // Import from shared types
 import { useEffect, useState } from "react"
 import { ExternalLink } from "lucide-react"
 
@@ -27,16 +26,26 @@ export function ProfileSheet({
   useEffect(() => {
     const fetchCertificates = async () => {
       if (!user) return;
+      
+      // If we already have matched certificates from search, use them primarily
+      // Or fetch full details if needed. Here we try to fetch full list.
+      try {
+        const response = await fetch(`/api/certificate/get-by-id/${user._id}`, {
+            headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+        });
+        const data = await response.json();
 
-      const response = await fetch(`/api/certificate/get-by-id/${user._id}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
-      const data = await response.json();
-
-      if (data.success) {
-        setCertificates(data.certificates);
+        if (data.success) {
+            setCertificates(data.certificates);
+        } else {
+            // Fallback to what we have in props if API fails/empty
+            setCertificates(user.matchedCertificates || user.certificates || []);
+        }
+      } catch (e) {
+          // Fallback
+          setCertificates(user.matchedCertificates || user.certificates || []);
       }
     };
 
@@ -62,7 +71,8 @@ export function ProfileSheet({
               <div>
                 <div className="text-lg font-semibold">{user.name}</div>
                 <div className="text-sm text-muted-foreground">
-                  {user.headline || "No headline"} • {user.location || "No location"}
+                  {user.headline || user.email || "No headline"} 
+                  {user.location && ` • ${user.location}`}
                 </div>
               </div>
               {user.isVerified && <Badge className="ml-auto">Verified</Badge>}
@@ -88,7 +98,7 @@ export function ProfileSheet({
               <div className="space-y-3">
                 {certificates && certificates.length > 0 ? (
                   certificates.map((cert) => (
-                    <div key={cert._id} className="flex items-start justify-between gap-3">
+                    <div key={cert._id} className="flex items-start justify-between gap-3 p-2 rounded bg-muted/20">
                       <div className="flex-1">
                         <p className="font-semibold text-sm">{cert.course}</p>
                         <p className="text-xs text-muted-foreground">{cert.issued_by}</p>

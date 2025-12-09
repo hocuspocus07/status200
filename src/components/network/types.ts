@@ -1,32 +1,36 @@
-export type ProfileData = {
-  _id: string;
-  name: string;
-  headline?: string;
-  location?: string;
-  avatar?: string,
-  title?: string,
-  email?:string,
-  about?: string;
-  skills?: string[];
-  profile?: {
-    avatar?: string;
-  };
-  isVerified?: boolean;
-  created_at?:Date;
-  isPublic?:boolean;
-};
+
 
 export interface Certificate {
   _id: string;
   course: string;
-  issued_to: string;
   issued_by: string;
+  issued_to: string;
   passed_at: string;
-  is_verified: boolean;
-  verification_link: string;
-  bucket_image_url?: string;
-  nsqf_level?: string;
-  blockchain_certificate_hash?: string;
-  reasons_for_failure?: string[];
-  transaction_hash?: string;
+  verification_link?: string;
+  nsqf_level?: number;
+  tags?: string[];
+  keywords?: string[];
+  course_duration?: number;
+  is_verified?: boolean;
+}
+
+export interface UserProfile {
+  avatar?: string;
+  username?: string;
+}
+
+export interface ProfileData {
+  _id: string;
+  name: string;
+  email: string;
+  headline?: string;
+  location?: string;
+  about?: string;
+  title?: string; // Used in MessageDialog header
+  isVerified?: boolean;
+  skills?: string[];
+  profile?: UserProfile;
+  // Specific to Search Results
+  matchedCertificates?: Certificate[];
+  certificates?: Certificate[];
 }
